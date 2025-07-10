@@ -224,7 +224,7 @@ test-generate-iso-image: install-debug-all-features
   #!/usr/bin/env bash
   set -eu
   ISO_OUT=$(mktemp -d)
-  bluebuild generate-iso -vv --output-dir "$ISO_OUT" image ghcr.io/blue-build/cli/test:40
+  bluebuild generate-iso -vv --output-dir "$ISO_OUT" image ghcr.io/ktheticdev/bluebuild-cli/test:40
 
 # Run ISO generator for images
 test-generate-iso-recipe: install-debug-all-features

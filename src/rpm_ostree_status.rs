@@ -113,7 +113,7 @@ mod test {
             deployments: vec![
                 RpmOstreeDeployments {
                     container_image_reference: format!(
-                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/blue-build/cli/test"
+                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/ktheticdev/bluebuild-cli/test"
                     )
                     .into(),
                     booted: true,
@@ -121,7 +121,7 @@ mod test {
                 },
                 RpmOstreeDeployments {
                     container_image_reference: format!(
-                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/blue-build/cli/test:last"
+                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/ktheticdev/bluebuild-cli/test:last"
                     )
                     .into(),
                     booted: false,
@@ -138,7 +138,7 @@ mod test {
             deployments: vec![
                 RpmOstreeDeployments {
                     container_image_reference: format!(
-                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/blue-build/cli/test"
+                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/ktheticdev/bluebuild-cli/test"
                     )
                     .into(),
                     booted: true,
@@ -146,7 +146,7 @@ mod test {
                 },
                 RpmOstreeDeployments {
                     container_image_reference: format!(
-                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/blue-build/cli/test:last"
+                        "{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/ktheticdev/bluebuild-cli/test:last"
                     )
                     .into(),
                     booted: false,
@@ -169,7 +169,7 @@ mod test {
                 },
                 RpmOstreeDeployments {
                     container_image_reference:
-                        format!("{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/blue-build/cli/test:last").into(),
+                        format!("{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/ktheticdev/bluebuild-cli/test:last").into(),
                     booted: false,
                     staged: false,
                 },
@@ -196,7 +196,7 @@ mod test {
                 },
                 RpmOstreeDeployments {
                     container_image_reference:
-                        format!("{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/blue-build/cli/test:last").into(),
+                        format!("{OSTREE_IMAGE_SIGNED}:docker://ghcr.io/ktheticdev/bluebuild-cli/test:last").into(),
                     booted: false,
                     staged: false,
                 },

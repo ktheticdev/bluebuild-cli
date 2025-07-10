@@ -313,7 +313,7 @@ fn make_github_issue_link(body: &str) -> String {
     let escaped = urlencoding::encode(body).replace("%20", "+");
 
     format!(
-        "https://github.com/blue-build/cli/issues/new?template={}&body={}",
+        "https://github.com/ktheticdev/bluebuild-cli/issues/new?template={}&body={}",
         urlencoding::encode("Bug_report.md"),
         escaped
     )

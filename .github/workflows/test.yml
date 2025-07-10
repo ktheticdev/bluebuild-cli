@@ -268,7 +268,7 @@ jobs:
 
       - name: Docker Login
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
-        if: inputs.repo == 'blue-build/cli'
+        if: inputs.repo == 'ktheticdev/bluebuild-cli'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

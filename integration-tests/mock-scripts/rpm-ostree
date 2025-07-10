@@ -16,12 +16,12 @@ elif [ "$1" = "status" ]; then
 {
   "deployments": [
     {
-      "container-image-reference": "ostree-image-signed:docker://ghcr.io/blue-build/cli/test",
+      "container-image-reference": "ostree-image-signed:docker://ghcr.io/ktheticdev/bluebuild-cli/test",
       "booted": true,
       "staged": false
     },
     {
-      "container-image-reference": "ostree-image-signed:docker://ghcr.io/blue-build/cli/test:last",
+      "container-image-reference": "ostree-image-signed:docker://ghcr.io/ktheticdev/bluebuild-cli/test:last",
       "booted": false,
       "staged": false
     }

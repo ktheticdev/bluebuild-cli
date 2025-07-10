@@ -43,7 +43,7 @@
 
           meta = {
             description = "BlueBuild's command line program that builds Containerfiles and custom images";
-            homepage = "https://github.com/blue-build/cli";
+            homepage = "https://github.com/ktheticdev/bluebuild-cli";
             license = lib.licenses.apsl20;
           };
         };
