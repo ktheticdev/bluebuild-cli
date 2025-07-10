@@ -1,10 +1,10 @@
 VERSION 0.8
-PROJECT blue-build/cli
+PROJECT ktheticdev/bluebuild-cli
 
 IMPORT github.com/blue-build/earthly-lib/rust AS rust
 # IMPORT ../earthly-lib/rust AS rust
 
-ARG --global IMAGE=ghcr.io/blue-build/cli
+ARG --global IMAGE=ghcr.io/ktheticdev/bluebuild-cli
 ARG --global TAGGED="false"
 ARG --global LATEST="false"
 
@@ -316,8 +316,8 @@ SAVE_IMAGE:
 LABELS:
     FUNCTION
     LABEL org.opencontainers.image.created="$BUILD_TIME"
-    LABEL org.opencontainers.image.url="https://github.com/blue-build/cli"
-    LABEL org.opencontainers.image.source="https://github.com/blue-build/cli"
+    LABEL org.opencontainers.image.url="https://github.com/ktheticdev/bluebuild-cli"
+    LABEL org.opencontainers.image.source="https://github.com/ktheticdev/bluebuild-cli"
     LABEL org.opencontainers.image.version="$VERSION"
     LABEL version="$VERSION"
     LABEL org.opencontainers.image.vendor="BlueBuild"
@@ -325,9 +325,9 @@ LABELS:
     LABEL org.opencontainers.image.licenses="Apache-2.0"
     LABEL license="Apache-2.0"
     LABEL org.opencontainers.image.title="BlueBuild CLI tool"
-    LABEL name="blue-build/cli"
+    LABEL name="ktheticdev/bluebuild-cli"
     LABEL org.opencontainers.image.description="A CLI tool built for creating Containerfile templates for ostree based atomic distros"
-    LABEL org.opencontainers.image.documentation="https://raw.githubusercontent.com/blue-build/cli/main/README.md"
+    LABEL org.opencontainers.image.documentation="https://raw.githubusercontent.com/ktheticdev/bluebuild-cli/main/README.md"
 
     IF [ "$TAGGED" = "true" ]
         ARG EARTHLY_GIT_BRANCH
