@@ -68,12 +68,17 @@
           "type": "boolean"
         },
         {
-          "type": "string",
-          "enum": [
-            "open",
-            "proprietary"
-          ]
-        }
+          "type": "object",
+	  "properties": {
+	    "nvidia": {
+	      "type": "string",
+	      "enum": [
+	        "open",
+		"proprietary"
+	      ]
+	    }
+          }
+	}
       ],
       "default": false,
       "description": "Optional NVIDIA support. Use a boolean (true) to enable default NVIDIA support, or a string to explicitly define the driver type (\"open\" or \"proprietary\")."
