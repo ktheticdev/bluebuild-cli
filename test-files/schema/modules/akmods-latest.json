@@ -23,6 +23,10 @@
 	  "type": "string",
 	  "const": "cachyos"
 	},
+	{
+	  "type": "string",
+	  "const": "cachyos-lto"
+	},
         {
           "type": "string",
           "const": "asus"
