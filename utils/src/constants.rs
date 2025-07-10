@@ -93,7 +93,7 @@ pub const UNKNOWN_TERMINAL: &str = "<unknown terminal>";
 pub const GITHUB_CHAR_LIMIT: usize = 8100; // Magic number accepted by Github
 
 // Schema
-pub const SCHEMA_BASE_URL: &str = "https://schema.blue-build.org";
+pub const SCHEMA_BASE_URL: &str = "https://raw.githubusercontent.com/ktheticdev/bluebuild-cli/refs/heads/main/test-files/schema";
 pub const RECIPE_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/recipe-v1.json");
 pub const STAGE_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/stage-v1.json");
 pub const MODULE_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/module-v1.json");
