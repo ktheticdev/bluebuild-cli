@@ -491,7 +491,7 @@ pub trait RechunkDriver: RunDriver + BuildDriver + ContainerMountDriver {
                     format_args!("org.opencontainers.image.base.digest={}", &opts.base_digest),
                     format_args!("org.opencontainers.image.base.name={}", &opts.base_image),
                     "org.opencontainers.image.created=<timestamp>",
-                    "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/blue-build/cli/main/README.md",
+                    "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ktheticdev/bluebuild-cli/main/README.md",
                 )
             })
             .args(bon::vec!["/sources/rechunk/3_chunk.sh"])

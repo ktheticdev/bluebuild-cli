@@ -14,7 +14,7 @@ stages:
 build-image:
   stage: build
   image:
-    name: ghcr.io/blue-build/cli:{{ version }}
+    name: ghcr.io/ktheticdev/bluebuild-cli:{{ version }}
     entrypoint: [""]
   services:
     - docker:dind

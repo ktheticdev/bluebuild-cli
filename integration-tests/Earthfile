@@ -1,5 +1,5 @@
 VERSION 0.8
-PROJECT blue-build/cli
+PROJECT ktheticdev/bluebuild-cli
 
 IMPORT github.com/earthly/lib/utils/dind AS dind
 

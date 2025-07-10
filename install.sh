@@ -21,7 +21,7 @@ function cleanup() {
   echo "Cleaning up image"
   cr rm blue-build-installer
   sleep 2
-  cr image rm ghcr.io/blue-build/cli:${VERSION}-installer
+  cr image rm ghcr.io/ktheticdev/bluebuild-cli:${VERSION}-installer
 }
 
 trap cleanup SIGINT
@@ -30,7 +30,7 @@ cr create \
   --pull always \
   --replace \
   --name blue-build-installer \
-  ghcr.io/blue-build/cli:${VERSION}-installer
+  ghcr.io/ktheticdev/bluebuild-cli:${VERSION}-installer
 
 set +e
 cr cp blue-build-installer:/out/bluebuild /tmp/
