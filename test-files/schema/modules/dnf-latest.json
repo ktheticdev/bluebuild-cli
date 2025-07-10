@@ -1,0 +1,412 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "/modules/dnf-latest.json",
+    "type": "object",
+    "properties": {
+        "type": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "const": "dnf"
+                },
+                {
+                    "type": "string",
+                    "const": "dnf@v1"
+                },
+                {
+                    "type": "string",
+                    "const": "dnf@latest"
+                }
+            ],
+            "description": "The dnf module offers pseudo-declarative package and repository management using dnf.\nhttps://blue-build.org/reference/modules/dnf/"
+        },
+        "no-cache": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to disabling caching for this layer.\nhttps://blue-build.org/reference/module/#no-cache-optional"
+        },
+        "env": {
+            "$ref": "#/$defs/RecordString",
+            "description": "Environment variables to add for the module call."
+        },
+        "repos": {
+            "$ref": "#/$defs/Repo",
+            "description": "List of links to .repo files to download into /etc/yum.repos.d/."
+        },
+        "optfix": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "List of folder names under /opt/ to enable for installing into."
+        },
+        "group-remove": {
+            "$ref": "#/$defs/GroupRemove",
+            "description": "Configuration of RPM groups removal."
+        },
+        "group-install": {
+            "$ref": "#/$defs/GroupInstall",
+            "description": "Configuration of RPM groups install."
+        },
+        "remove": {
+            "$ref": "#/$defs/Remove",
+            "description": "Configuration of RPM packages removal."
+        },
+        "install": {
+            "$ref": "#/$defs/Install",
+            "description": "Configuration of RPM packages install."
+        },
+        "replace": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Replace"
+            },
+            "description": "List of configurations for replacing packages from another repo."
+        }
+    },
+    "required": [
+        "type"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "RecordString": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
+        "Repo": {
+            "type": "object",
+            "properties": {
+                "cleanup": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Cleans up the repos added in the same step after packages are installed."
+                },
+                "files": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        {
+                            "$ref": "#/$defs/RepoFiles"
+                        }
+                    ],
+                    "description": "List of paths or URLs to .repo files to import"
+                },
+                "copr": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        {
+                            "$ref": "#/$defs/RepoCopr"
+                        }
+                    ],
+                    "description": "List of COPR project repos to add.\nYou can also specify 2 lists\ninstead to 'enable' or 'disable' COPR repos."
+                },
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of links to key files to import for installing from custom repositories."
+                },
+                "nonfree": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "const": "negativo17"
+                        },
+                        {
+                            "type": "string",
+                            "const": "rpmfusion"
+                        }
+                    ],
+                    "description": "Enable one of the nonfree repos.\n\nThis allows you to enable one of the nonfree repos.\nHowever, only one can be enabled at a time so if one\nis enabled, the other will be disabled if it is already enabled."
+                }
+            },
+            "additionalProperties": false
+        },
+        "GroupRemove": {
+            "type": "object",
+            "properties": {
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of RPM groups to remove."
+                }
+            },
+            "required": [
+                "packages"
+            ],
+            "additionalProperties": false
+        },
+        "GroupInstall": {
+            "type": "object",
+            "properties": {
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of RPM groups to install."
+                },
+                "with-optional": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include optional packages from group."
+                },
+                "install-weak-deps": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to install weak dependencies."
+                },
+                "skip-unavailable": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are no packages available in the repository."
+                },
+                "skip-broken": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are broken packages."
+                },
+                "allow-erasing": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                }
+            },
+            "required": [
+                "packages"
+            ],
+            "additionalProperties": false
+        },
+        "Remove": {
+            "type": "object",
+            "properties": {
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of RPM packages to remove."
+                },
+                "auto-remove": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to remove unused dependencies during removal operation."
+                }
+            },
+            "required": [
+                "packages"
+            ],
+            "additionalProperties": false
+        },
+        "Install": {
+            "type": "object",
+            "properties": {
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/InstallRepo"
+                            }
+                        ]
+                    },
+                    "description": "List of RPM packages to install."
+                },
+                "install-weak-deps": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to install weak dependencies."
+                },
+                "skip-unavailable": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are no packages available in the repository."
+                },
+                "skip-broken": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are broken packages."
+                },
+                "allow-erasing": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                }
+            },
+            "required": [
+                "packages"
+            ],
+            "additionalProperties": false
+        },
+        "Replace": {
+            "type": "object",
+            "properties": {
+                "from-repo": {
+                    "type": "string",
+                    "description": "URL to the source COPR repo for the new packages."
+                },
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Swap"
+                            }
+                        ]
+                    },
+                    "description": "List of packages to replace using packages from the defined repo."
+                },
+                "install-weak-deps": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to install weak dependencies."
+                },
+                "skip-unavailable": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are no packages available in the repository."
+                },
+                "skip-broken": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are broken packages."
+                },
+                "allow-erasing": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                }
+            },
+            "required": [
+                "from-repo",
+                "packages"
+            ],
+            "additionalProperties": false
+        },
+        "RepoFiles": {
+            "type": "object",
+            "properties": {
+                "add": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of repo files/URLs to add."
+                },
+                "remove": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of repos to disable.\nThis must be the ID of the repo\nas seen in `dnf5 repolist`."
+                }
+            },
+            "additionalProperties": false
+        },
+        "RepoCopr": {
+            "type": "object",
+            "properties": {
+                "enable": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of COPR repos to enable"
+                },
+                "disable": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of COPR repos to disable"
+                }
+            },
+            "additionalProperties": false
+        },
+        "InstallRepo": {
+            "type": "object",
+            "properties": {
+                "repo": {
+                    "type": "string",
+                    "description": "The repo to use when installing packages"
+                },
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of RPM packages to install."
+                },
+                "install-weak-deps": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to install weak dependencies."
+                },
+                "skip-unavailable": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are no packages available in the repository."
+                },
+                "skip-broken": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to continue with the install if there are broken packages."
+                },
+                "allow-erasing": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                }
+            },
+            "required": [
+                "repo",
+                "packages"
+            ],
+            "additionalProperties": false
+        },
+        "Swap": {
+            "type": "object",
+            "properties": {
+                "old": {
+                    "type": "string",
+                    "description": "The package to be replaced."
+                },
+                "new": {
+                    "type": "string",
+                    "description": "The package to replace with."
+                },
+                "allow-erasing": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                }
+            },
+            "required": [
+                "old",
+                "new"
+            ],
+            "additionalProperties": false
+        }
+    }
+}

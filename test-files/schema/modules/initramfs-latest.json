@@ -1,0 +1,46 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "/modules/initramfs-latest.json",
+    "type": "object",
+    "properties": {
+        "type": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "const": "initramfs"
+                },
+                {
+                    "type": "string",
+                    "const": "initramfs@v1"
+                },
+                {
+                    "type": "string",
+                    "const": "initramfs@latest"
+                }
+            ],
+            "description": "The initramfs module is used to regenerate initramfs, needed to apply some modifications early in the Linux startup process.\nhttps://blue-build.org/reference/modules/initramfs/"
+        },
+        "no-cache": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to disabling caching for this layer.\nhttps://blue-build.org/reference/module/#no-cache-optional"
+        },
+        "env": {
+            "$ref": "#/$defs/RecordString",
+            "description": "Environment variables to add for the module call."
+        }
+    },
+    "required": [
+        "type"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "RecordString": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {
+                "type": "string"
+            }
+        }
+    }
+}
