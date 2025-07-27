@@ -12,7 +12,7 @@ path = "process.rs"
 
 [dependencies]
 anyhow = "1"
-blue-build-utils = { version = "=0.9.19", path = "../utils" }
+blue-build-utils = { version = "=0.9.20", path = "../utils" }
 indicatif-log-bridge = "0.2"
 log4rs = { version = "1", features = ["background_rotation"] }
 nu-ansi-term = { version = "0.50", features = ["gnu_legacy"] }
@@ -20,7 +20,6 @@ os_pipe = { version = "1", features = ["io_safety"] }
 rand = "0.9"
 signal-hook = { version = "0.3", features = ["extended-siginfo"] }
 sigstore = { version = "0.11", features = ["full-rustls-tls", "cached-client", "sigstore-trust-root", "sign"], default-features = false }
-zeroize = { version = "1", features = ["aarch64", "derive", "serde"] }
 
 cached.workspace = true
 chrono.workspace = true
@@ -42,10 +41,11 @@ tokio.workspace = true
 bon.workspace = true
 users.workspace = true
 uuid.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
-blue-build-utils = { version = "=0.9.19", path = "../utils", features = ["test"]  }
+blue-build-utils = { version = "=0.9.20", path = "../utils", features = ["test"]  }
 
 [lints]
 workspace = true
