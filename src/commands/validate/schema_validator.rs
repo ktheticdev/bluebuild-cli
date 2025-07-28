@@ -423,7 +423,7 @@ mod test {
     )]
     #[case::default_flatpaks(
         "test-files/recipes/modules/default-flatpaks-pass.yml",
-        "test-files/schema/modules/default-flatpaks-v2.json"
+        "test-files/schema/modules/default-flatpaks-v1.json"
     )]
     #[case::files(
         "test-files/recipes/modules/files-pass.yml",
@@ -531,7 +531,7 @@ mod test {
     )]
     #[case::default_flatpaks(
         "test-files/recipes/modules/default-flatpaks-fail.yml",
-        "test-files/schema/modules/default-flatpaks-v2.json",
+        "test-files/schema/modules/default-flatpaks-v1.json",
         4
     )]
     #[case::files(
