@@ -43,6 +43,9 @@
           "$ref": "/modules/default-flatpaks-v1.json"
         },
         {
+          "$ref": "/modules/default-flatpaks-v2.json"
+        },
+        {
           "$ref": "/modules/files-latest.json"
         },
         {
