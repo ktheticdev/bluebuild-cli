@@ -1,0 +1,237 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "/modules/default-flatpaks-v2.json",
+    "type": "object",
+    "properties": {
+        "type": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "const": "default-flatpaks@v2"
+                },
+                {
+                    "type": "string",
+                    "const": "default-flatpaks@latest"
+                },
+                {
+                    "type": "string",
+                    "const": "default-flatpaks"
+                }
+            ],
+            "description": "The default-flatpaks module can be used to install Flatpaks from a configurable remote on every boot.\nusing version: v2\nhttps://blue-build.org/reference/modules/default-flatpaks/"
+        },
+        "no-cache": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to disabling caching for this layer.\nhttps://blue-build.org/reference/module/#no-cache-optional"
+        },
+        "env": {
+            "$ref": "#/$defs/RecordString",
+            "description": "Environment variables to add for the module call."
+        },
+        "secrets": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Secret"
+            },
+            "description": "Secrets to mount for this module call."
+        },
+        "configurations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "notify": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Whether to notify users about Flatpak installation."
+                    },
+                    "scope": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "const": "system"
+                            },
+                            {
+                                "type": "string",
+                                "const": "user"
+                            }
+                        ],
+                        "default": "user",
+                        "description": "Whether to perform this configuration for system-wide or separately for each user."
+                    },
+                    "repo": {
+                        "type": "object",
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "default": "https://dl.flathub.org/repo/flathub.flatpakrepo",
+                                "description": "Flatpak repository URL."
+                            },
+                            "name": {
+                                "type": "string",
+                                "default": "flathub",
+                                "description": "Flatpak repository name."
+                            },
+                            "title": {
+                                "type": "string",
+                                "default": "Flathub",
+                                "description": "Flatpak repository formatted title."
+                            }
+                        },
+                        "description": "Details of the Flatpak repository to set up. If omitted, Flathub will be used by default."
+                    },
+                    "install": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "List of Flatpak IDs to install from the repo."
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "type",
+        "configurations"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "RecordString": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
+        "Secret": {
+            "oneOf": [
+                {
+                    "$ref": "#/$defs/SecretEnv"
+                },
+                {
+                    "$ref": "#/$defs/SecretFile"
+                },
+                {
+                    "$ref": "#/$defs/SecretExec"
+                },
+                {
+                    "$ref": "#/$defs/SecretSsh"
+                }
+            ]
+        },
+        "SecretEnv": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "env",
+                    "description": "A secret pulled from an environment variable."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The name of the environment variable"
+                }
+            },
+            "required": [
+                "type",
+                "name"
+            ]
+        },
+        "SecretFile": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "The source file containing the secret.\n\nNOTE: Relative paths are relative to the root of the repository."
+                },
+                "type": {
+                    "type": "string",
+                    "const": "file",
+                    "description": "A secret pulled from a file on the host system."
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "The destination path in the build to mount the secret."
+                }
+            },
+            "required": [
+                "source",
+                "type",
+                "destination"
+            ]
+        },
+        "SecretExec": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "exec",
+                    "description": "A secret pulled from the stdout of a command."
+                },
+                "command": {
+                    "type": "string",
+                    "description": "The command that will be executed."
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Arguments for the command being executed."
+                },
+                "output": {
+                    "$ref": "#/$defs/SecretExecOutput",
+                    "description": "Defines the output method for the result of the command into the build."
+                }
+            },
+            "required": [
+                "type",
+                "command",
+                "output"
+            ]
+        },
+        "SecretSsh": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "ssh",
+                    "description": "Mount the SSH socket to use the hosts SSH socket."
+                }
+            },
+            "required": [
+                "type"
+            ]
+        },
+        "SecretExecOutput": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/SecretEnv"
+                },
+                {
+                    "$ref": "#/$defs/SecretExecOutputFile"
+                }
+            ]
+        },
+        "SecretExecOutputFile": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "file",
+                    "description": "A secret pulled from a file on the host system."
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "The destination path in the build to mount the secret."
+                }
+            },
+            "required": [
+                "type",
+                "destination"
+            ]
+        }
+    }
+}
