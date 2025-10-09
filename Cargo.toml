@@ -7,7 +7,7 @@ edition = "2024"
 repository = "https://github.com/ktheticdev/bluebuild-cli"
 license = "Apache-2.0"
 categories = ["command-line-utilities"]
-version = "0.9.20"
+version = "0.9.24"
 
 [workspace.dependencies]
 bon = "3"
@@ -18,10 +18,13 @@ colored = "2"
 comlexr = "1"
 indexmap = { version = "2", features = ["serde"] }
 indicatif = { version = "0.18", features = ["improved_unicode", "rayon"] }
+lazy-regex = "3"
 log = "0.4"
 miette = "7"
 nix = { version = "0.29" }
-oci-distribution = { version = "0.11", default-features = false }
+oci-distribution = { package = "oci-client", version = "0.15.0", default-features = false }
+pretty_assertions = "1"
+regex = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 rstest = "0.18"
 semver = "1"
@@ -66,10 +69,10 @@ pre-release-replacements = [
 ]
 
 [dependencies]
-blue-build-recipe = { version = "=0.9.20", path = "./recipe" }
-blue-build-template = { version = "=0.9.20", path = "./template" }
-blue-build-utils = { version = "=0.9.20", path = "./utils" }
-blue-build-process-management = { version = "=0.9.20", path = "./process" }
+blue-build-recipe = { version = "=0.9.24", path = "./recipe" }
+blue-build-template = { version = "=0.9.24", path = "./template" }
+blue-build-utils = { version = "=0.9.24", path = "./utils" }
+blue-build-process-management = { version = "=0.9.24", path = "./process" }
 clap-verbosity-flag = "3"
 clap_complete = "4"
 clap_complete_nushell = "4"
@@ -78,9 +81,8 @@ jsonschema = "0.30"
 open = "5"
 os_info = "3"
 rayon = "1"
-regex = "1"
 requestty = { version = "0.5", features = ["macros", "termion"] }
-shadow-rs = { version = "1", default-features = false }
+shadow-rs = { version = "1.4.0", default-features = false }
 thiserror = "2"
 urlencoding = "2"
 yaml-rust2 = "0.10"
@@ -94,6 +96,7 @@ indicatif.workspace = true
 log.workspace = true
 miette = { workspace = true, features = ["fancy"] }
 oci-distribution.workspace = true
+regex.workspace = true
 reqwest.workspace = true
 semver.workspace = true
 serde.workspace = true
@@ -104,10 +107,17 @@ tempfile.workspace = true
 tokio.workspace = true
 bon.workspace = true
 users.workspace = true
+rust-embed = { version = "8.7.2", features = ["debug-embed", "compression", "deterministic-timestamps"] }
 
 [features]
 # Top level features
 default = []
+
+v0_10_0 = [
+  "bootc"
+]
+bootc = ["blue-build-process-management/bootc"]
+vendored-libgit2 = ["dep:git2", "git2/vendored-libgit2"]
 
 [dev-dependencies]
 rusty-hook = "0.11"
@@ -115,7 +125,8 @@ rusty-hook = "0.11"
 rstest.workspace = true
 
 [build-dependencies]
-shadow-rs = "1"
+git2 = { version = "0.20.0", default-features = false, optional = true }
+shadow-rs = { version = "1.4.0" }
 
 [lints]
 workspace = true

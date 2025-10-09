@@ -1,18 +1,16 @@
-use std::{io::Write, process::Stdio};
-
 use blue_build_utils::{credentials::Credentials, secret::SecretArgs, semver::Version};
 use colored::Colorize;
-use comlexr::cmd;
+use comlexr::{cmd, pipe};
 use log::{debug, error, info, trace};
-use miette::{Context, IntoDiagnostic, Result, bail, miette};
+use miette::{Context, IntoDiagnostic, Result, bail};
 use serde::Deserialize;
 use tempfile::TempDir;
 
-use crate::{drivers::types::Platform, logging::CommandLogging};
+use crate::logging::CommandLogging;
 
 use super::{
     BuildDriver, DriverVersion,
-    opts::{BuildOpts, PushOpts, TagOpts},
+    opts::{BuildOpts, PruneOpts, PushOpts, TagOpts},
 };
 
 #[derive(Debug, Deserialize)]
@@ -48,7 +46,7 @@ impl DriverVersion for BuildahDriver {
 }
 
 impl BuildDriver for BuildahDriver {
-    fn build(opts: &BuildOpts) -> Result<()> {
+    fn build(opts: BuildOpts) -> Result<()> {
         trace!("BuildahDriver::build({opts:#?})");
 
         let temp_dir = TempDir::new()
@@ -59,9 +57,10 @@ impl BuildDriver for BuildahDriver {
             "buildah",
             "build",
             for opts.secrets.args(&temp_dir)?,
-            if !matches!(opts.platform, Platform::Native) => [
+            if opts.secrets.ssh() => "--ssh",
+            if let Some(platform) = opts.platform => [
                 "--platform",
-                opts.platform.to_string(),
+                platform.to_string(),
             ],
             "--pull=true",
             format!("--layers={}", !opts.squash),
@@ -82,7 +81,7 @@ impl BuildDriver for BuildahDriver {
                 ),
             ],
             "-f",
-            &*opts.containerfile,
+            opts.containerfile,
             "-t",
             opts.image.to_string(),
         );
@@ -100,7 +99,7 @@ impl BuildDriver for BuildahDriver {
         Ok(())
     }
 
-    fn tag(opts: &TagOpts) -> Result<()> {
+    fn tag(opts: TagOpts) -> Result<()> {
         trace!("BuildahDriver::tag({opts:#?})");
 
         let dest_image_str = opts.dest_image.to_string();
@@ -121,7 +120,7 @@ impl BuildDriver for BuildahDriver {
         Ok(())
     }
 
-    fn push(opts: &PushOpts) -> Result<()> {
+    fn push(opts: PushOpts) -> Result<()> {
         trace!("BuildahDriver::push({opts:#?})");
 
         let image_str = opts.image.to_string();
@@ -149,52 +148,38 @@ impl BuildDriver for BuildahDriver {
         Ok(())
     }
 
-    fn login() -> Result<()> {
+    fn login(server: &str) -> Result<()> {
         trace!("BuildahDriver::login()");
 
-        if let Some(Credentials {
-            registry,
-            username,
-            password,
-        }) = Credentials::get()
-        {
-            let mut command = cmd!(
-                "buildah",
-                "login",
-                "-u",
-                username,
-                "--password-stdin",
-                registry
-            );
-            command
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
-
-            trace!("{command:?}");
-            let mut child = command.spawn().into_diagnostic()?;
-
-            write!(
-                child
-                    .stdin
-                    .as_mut()
-                    .ok_or_else(|| miette!("Unable to open pipe to stdin"))?,
-                "{password}"
+        if let Some(Credentials::Basic { username, password }) = Credentials::get(server) {
+            let output = pipe!(
+                stdin = password.value();
+                {
+                    let c = cmd!(
+                        "buildah",
+                        "login",
+                        "-u",
+                        &username,
+                        "--password-stdin",
+                        server,
+                    );
+                    trace!("{c:?}");
+                    c
+                }
             )
+            .output()
             .into_diagnostic()?;
-
-            let output = child.wait_with_output().into_diagnostic()?;
 
             if !output.status.success() {
                 let err_out = String::from_utf8_lossy(&output.stderr);
                 bail!("Failed to login for buildah:\n{}", err_out.trim());
             }
-            debug!("Logged into {registry}");
+            debug!("Logged into {server}");
         }
         Ok(())
     }
 
-    fn prune(opts: &super::opts::PruneOpts) -> Result<()> {
+    fn prune(opts: PruneOpts) -> Result<()> {
         trace!("PodmanDriver::prune({opts:?})");
 
         let status = cmd!(

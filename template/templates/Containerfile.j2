@@ -7,6 +7,7 @@ FROM {{ recipe.base_image }}@{{ base_digest }} AS {{ main_stage }}
 
 ARG RECIPE={{ recipe_path.display() }}
 ARG IMAGE_REGISTRY={{ registry }}
+ARG BB_BUILD_FEATURES="{{ get_features() }}"
 
 {%- if self::config_dir_exists() && !self::files_dir_exists() %}
 ARG CONFIG_DIRECTORY="/tmp/config"
@@ -39,12 +40,14 @@ RUN --mount=type=bind,from={{ blue_build_utils::constants::NUSHELL_IMAGE }}:{{ g
   && cp -r /tmp/nu/* /usr/libexec/bluebuild/nu/
 {%- endif %}
 
-RUN --mount=type=bind,from={{ build_scripts_image }},src=/scripts/,dst=/scripts/ \
+RUN \
+  {{ scripts_mount("/scripts/") }} \
   /scripts/pre_build.sh
 
 {% call modules::main_modules_run(recipe.modules_ext, os_version) %}
 
-RUN --mount=type=bind,from={{ build_scripts_image }},src=/scripts/,dst=/scripts/ \
+RUN \
+  {{ scripts_mount("/scripts/") }} \
   /scripts/post_build.sh
 
 # Labels are added last since they cause cache misses with buildah

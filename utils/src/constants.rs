@@ -8,6 +8,7 @@ pub const CONTAINER_FILE: &str = "Containerfile";
 pub const COSIGN_PUB_PATH: &str = "./cosign.pub";
 pub const COSIGN_PRIV_PATH: &str = "./cosign.key";
 pub const FILES_PATH: &str = "./files";
+pub const GITIGNORE_PATH: &str = "./.gitignore";
 pub const LOCAL_BUILD: &str = "/etc/bluebuild";
 pub const MODULES_PATH: &str = "./config/modules";
 pub const RECIPE_FILE: &str = "recipe.yml";
@@ -19,14 +20,27 @@ pub const IMAGE_VERSION_LABEL: &str = "org.opencontainers.image.version";
 
 // BlueBuild vars
 pub const BB_CACHE_LAYERS: &str = "BB_CACHE_LAYERS";
+pub const BB_BOOT_DRIVER: &str = "BB_BOOT_DRIVER";
+pub const BB_BUILD_ARCHIVE: &str = "BB_BUILD_ARCHIVE";
+pub const BB_BUILD_DRIVER: &str = "BB_BUILD_DRIVER";
+pub const BB_BUILD_NO_SIGN: &str = "BB_BUILD_NO_SIGN";
+pub const BB_BUILD_PUSH: &str = "BB_BUILD_PUSH";
+pub const BB_BUILD_PLATFORM: &str = "BB_BUILD_PLATFORM";
+pub const BB_BUILD_RETRY_PUSH: &str = "BB_BUILD_RETRY_PUSH";
+pub const BB_BUILD_RETRY_COUNT: &str = "BB_BUILD_RETRY_COUNT";
+pub const BB_BUILD_RECHUNK: &str = "BB_BUILD_RECHUNK";
+pub const BB_BUILD_RECHUNK_CLEAR_PLAN: &str = "BB_BUILD_RECHUNK_CLEAR_PLAN";
+pub const BB_BUILD_SQUASH: &str = "BB_BUILD_SQUASH";
+pub const BB_INSPECT_DRIVER: &str = "BB_INSPECT_DRIVER";
 pub const BB_PASSWORD: &str = "BB_PASSWORD";
 pub const BB_PRIVATE_KEY: &str = "BB_PRIVATE_KEY";
 pub const BB_REGISTRY: &str = "BB_REGISTRY";
 pub const BB_REGISTRY_NAMESPACE: &str = "BB_REGISTRY_NAMESPACE";
+pub const BB_RUN_DRIVER: &str = "BB_RUN_DRIVER";
+pub const BB_SIGNING_DRIVER: &str = "BB_SIGNING_DRIVER";
 pub const BB_SKIP_VALIDATION: &str = "BB_SKIP_VALIDATION";
+pub const BB_TEMPDIR: &str = "BB_TEMPDIR";
 pub const BB_USERNAME: &str = "BB_USERNAME";
-pub const BB_BUILD_RECHUNK: &str = "BB_BUILD_RECHUNK";
-pub const BB_BUILD_RECHUNK_CLEAR_PLAN: &str = "BB_BUILD_RECHUNK_CLEAR_PLAN";
 
 // Docker vars
 pub const DOCKER_HOST: &str = "DOCKER_HOST";
@@ -81,13 +95,15 @@ pub const BLUE_BUILD: &str = "bluebuild";
 pub const BUILD_SCRIPTS_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli/build-scripts";
 pub const BLUE_BULID_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli";
 pub const BLUE_BUILD_MODULE_IMAGE_REF: &str = "ghcr.io/blue-build/modules";
-pub const COSIGN_IMAGE: &str = "ghcr.io/sigstore/cosign/cosign:v2.5.3";
+pub const BLUE_BUILD_SCRIPTS_DIR_IGNORE: &str = "/.bluebuild-scripts_*";
+pub const COSIGN_IMAGE: &str = "ghcr.io/sigstore/cosign/cosign:v2.6.1";
 pub const NUSHELL_IMAGE: &str = "ghcr.io/blue-build/nushell-image";
 pub const OCI_ARCHIVE: &str = "oci-archive";
 pub const OSTREE_IMAGE_SIGNED: &str = "ostree-image-signed";
 pub const OSTREE_UNVERIFIED_IMAGE: &str = "ostree-unverified-image";
 pub const SKOPEO_IMAGE: &str = "quay.io/skopeo/stable:latest";
 pub const TEMPLATE_REPO_URL: &str = "https://github.com/blue-build/template.git";
+pub const USER: &str = "USER";
 pub const UNKNOWN_SHELL: &str = "<unknown shell>";
 pub const UNKNOWN_VERSION: &str = "<unknown version>";
 pub const UNKNOWN_TERMINAL: &str = "<unknown terminal>";
@@ -110,3 +126,4 @@ pub const STAGE_SCHEMA: &str = concat!(JSON_SCHEMA, "/stage-v1.json");
 // Messages
 pub const BUG_REPORT_WARNING_MESSAGE: &str =
     "Please copy the above report and open an issue manually.";
+pub const SUDO_PROMPT: &str = "Bluebuild requires your password for sudo operation";

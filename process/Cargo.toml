@@ -12,7 +12,7 @@ path = "process.rs"
 
 [dependencies]
 anyhow = "1"
-blue-build-utils = { version = "=0.9.20", path = "../utils" }
+blue-build-utils = { version = "=0.9.24", path = "../utils" }
 indicatif-log-bridge = "0.2"
 log4rs = { version = "1", features = ["background_rotation"] }
 nu-ansi-term = { version = "0.50", features = ["gnu_legacy"] }
@@ -28,6 +28,7 @@ colored.workspace = true
 comlexr.workspace = true
 indicatif.workspace = true
 indexmap.workspace = true
+lazy-regex.workspace = true
 log.workspace = true
 miette.workspace = true
 nix = { workspace = true, features = ["signal"] }
@@ -44,8 +45,12 @@ uuid.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
+pretty_assertions.workspace = true
 rstest.workspace = true
-blue-build-utils = { version = "=0.9.20", path = "../utils", features = ["test"]  }
+blue-build-utils = { version = "=0.9.24", path = "../utils", features = ["test"]  }
 
 [lints]
 workspace = true
+
+[features]
+bootc = []

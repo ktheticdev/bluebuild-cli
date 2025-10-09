@@ -10,39 +10,51 @@ use std::{
     borrow::Borrow,
     fmt::Debug,
     process::{ExitStatus, Output},
-    sync::{Mutex, RwLock},
+    sync::{LazyLock, RwLock, atomic::AtomicBool},
     time::Duration,
 };
 
-use blue_build_utils::{BUILD_ID, semver::Version};
+use blue_build_utils::{
+    BUILD_ID,
+    constants::{
+        BB_BOOT_DRIVER, BB_BUILD_DRIVER, BB_INSPECT_DRIVER, BB_RUN_DRIVER, BB_SIGNING_DRIVER,
+    },
+    semver::Version,
+};
 use bon::{Builder, bon};
 use cached::proc_macro::cached;
 use clap::Args;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{info, trace, warn};
-use miette::{Result, miette};
+use miette::{Context, Result};
 use oci_distribution::Reference;
 use opts::{
-    BuildOpts, BuildTagPushOpts, CheckKeyPairOpts, CreateContainerOpts, GenerateImageNameOpts,
-    GenerateKeyPairOpts, GenerateTagsOpts, GetMetadataOpts, PushOpts, RemoveContainerOpts,
-    RemoveImageOpts, RunOpts, SignOpts, TagOpts, VerifyOpts,
+    BuildOpts, BuildTagPushOpts, CheckKeyPairOpts, ContainerOpts, CopyOciDirOpts,
+    CreateContainerOpts, GenerateImageNameOpts, GenerateKeyPairOpts, GenerateTagsOpts,
+    GetMetadataOpts, PruneOpts, PushOpts, RechunkOpts, RemoveContainerOpts, RemoveImageOpts,
+    RunOpts, SignOpts, SwitchOpts, TagOpts, VerifyOpts, VolumeOpts,
 };
 use types::{
-    BuildDriverType, CiDriverType, DetermineDriver, ImageMetadata, InspectDriverType, Platform,
-    RunDriverType, SigningDriverType,
+    BootDriverType, BuildDriverType, CiDriverType, ImageMetadata, InspectDriverType, RunDriverType,
+    SigningDriverType,
 };
 use uuid::Uuid;
 
-use crate::logging::Logger;
+use crate::{drivers::oci_client::OciClientDriver, logging::Logger};
 
 pub use self::{
     buildah_driver::BuildahDriver, cosign_driver::CosignDriver, docker_driver::DockerDriver,
     github_driver::GithubDriver, gitlab_driver::GitlabDriver, local_driver::LocalDriver,
-    podman_driver::PodmanDriver, sigstore_driver::SigstoreDriver, skopeo_driver::SkopeoDriver,
-    traits::*,
+    podman_driver::PodmanDriver, rpm_ostree_driver::RpmOstreeDriver,
+    sigstore_driver::SigstoreDriver, skopeo_driver::SkopeoDriver, traits::*,
 };
 
+#[cfg(feature = "bootc")]
+pub use bootc_driver::BootcDriver;
+
+#[cfg(feature = "bootc")]
+mod bootc_driver;
 mod buildah_driver;
 mod cosign_driver;
 mod docker_driver;
@@ -50,24 +62,28 @@ mod functions;
 mod github_driver;
 mod gitlab_driver;
 mod local_driver;
+mod oci_client;
 pub mod opts;
 mod podman_driver;
+mod rpm_ostree_driver;
 mod sigstore_driver;
 mod skopeo_driver;
 mod traits;
 pub mod types;
 
-static INIT: std::sync::LazyLock<Mutex<bool>> = std::sync::LazyLock::new(|| Mutex::new(false));
-static SELECTED_BUILD_DRIVER: std::sync::LazyLock<RwLock<Option<BuildDriverType>>> =
-    std::sync::LazyLock::new(|| RwLock::new(None));
-static SELECTED_INSPECT_DRIVER: std::sync::LazyLock<RwLock<Option<InspectDriverType>>> =
-    std::sync::LazyLock::new(|| RwLock::new(None));
-static SELECTED_RUN_DRIVER: std::sync::LazyLock<RwLock<Option<RunDriverType>>> =
-    std::sync::LazyLock::new(|| RwLock::new(None));
-static SELECTED_SIGNING_DRIVER: std::sync::LazyLock<RwLock<Option<SigningDriverType>>> =
-    std::sync::LazyLock::new(|| RwLock::new(None));
-static SELECTED_CI_DRIVER: std::sync::LazyLock<RwLock<Option<CiDriverType>>> =
-    std::sync::LazyLock::new(|| RwLock::new(None));
+static INIT: AtomicBool = AtomicBool::new(false);
+static SELECTED_BUILD_DRIVER: LazyLock<RwLock<Option<BuildDriverType>>> =
+    LazyLock::new(|| RwLock::new(None));
+static SELECTED_INSPECT_DRIVER: LazyLock<RwLock<Option<InspectDriverType>>> =
+    LazyLock::new(|| RwLock::new(None));
+static SELECTED_RUN_DRIVER: LazyLock<RwLock<Option<RunDriverType>>> =
+    LazyLock::new(|| RwLock::new(None));
+static SELECTED_SIGNING_DRIVER: LazyLock<RwLock<Option<SigningDriverType>>> =
+    LazyLock::new(|| RwLock::new(None));
+static SELECTED_CI_DRIVER: LazyLock<RwLock<Option<CiDriverType>>> =
+    LazyLock::new(|| RwLock::new(None));
+static SELECTED_BOOT_DRIVER: LazyLock<RwLock<Option<BootDriverType>>> =
+    LazyLock::new(|| RwLock::new(None));
 
 /// Args for selecting the various drivers to use for runtime.
 ///
@@ -78,23 +94,26 @@ static SELECTED_CI_DRIVER: std::sync::LazyLock<RwLock<Option<CiDriverType>>> =
 pub struct DriverArgs {
     /// Select which driver to use to build
     /// your image.
-    #[arg(short = 'B', long)]
-    build_driver: Option<BuildDriverType>,
+    #[arg(short = 'B', long, env = BB_BUILD_DRIVER)]
+    pub build_driver: Option<BuildDriverType>,
 
     /// Select which driver to use to inspect
     /// images.
-    #[arg(short = 'I', long)]
-    inspect_driver: Option<InspectDriverType>,
+    #[arg(short = 'I', long, env = BB_INSPECT_DRIVER)]
+    pub inspect_driver: Option<InspectDriverType>,
 
     /// Select which driver to use to sign
     /// images.
-    #[arg(short = 'S', long)]
-    signing_driver: Option<SigningDriverType>,
+    #[arg(short = 'S', long, env = BB_SIGNING_DRIVER)]
+    pub signing_driver: Option<SigningDriverType>,
 
     /// Select which driver to use to run
     /// containers.
-    #[arg(short = 'R', long)]
-    run_driver: Option<RunDriverType>,
+    #[arg(short = 'R', long, env = BB_RUN_DRIVER)]
+    pub run_driver: Option<RunDriverType>,
+
+    #[arg(short = 'T', long, env = BB_BOOT_DRIVER)]
+    pub boot_driver: Option<BootDriverType>,
 }
 
 macro_rules! impl_driver_type {
@@ -108,12 +127,13 @@ macro_rules! impl_driver_init {
     (@) => { };
     ($init:ident; $($tail:tt)*) => {
         {
-            let mut initialized = $init.lock().expect("Must lock INIT");
-
-            if !*initialized {
+            if $init.compare_exchange(
+                false,
+                true,
+                std::sync::atomic::Ordering::AcqRel,
+                std::sync::atomic::Ordering::Acquire
+            ).is_ok() {
                 impl_driver_init!(@ $($tail)*);
-
-                *initialized = true;
             }
         }
     };
@@ -156,12 +176,17 @@ impl Driver {
     pub fn init(mut args: DriverArgs) {
         trace!("Driver::init()");
 
+        if args.inspect_driver.is_some() {
+            warn!("Setting the inspect driver is deprecated.");
+        }
+
         impl_driver_init! {
             INIT;
             args.build_driver => SELECTED_BUILD_DRIVER;
-            args.inspect_driver => SELECTED_INSPECT_DRIVER;
             args.run_driver => SELECTED_RUN_DRIVER;
             args.signing_driver => SELECTED_SIGNING_DRIVER;
+            args.boot_driver => SELECTED_BOOT_DRIVER;
+            default => SELECTED_INSPECT_DRIVER;
             default => SELECTED_CI_DRIVER;
         }
     }
@@ -188,9 +213,6 @@ impl Driver {
     pub fn get_os_version(
         /// The OCI image reference.
         oci_ref: &Reference,
-        /// The platform of the image to pull the version info from.
-        #[builder(default)]
-        platform: Platform,
     ) -> Result<u64> {
         trace!("Driver::get_os_version({oci_ref:#?})");
 
@@ -205,27 +227,22 @@ impl Driver {
 
         info!("Retrieving OS version from {oci_ref}");
 
-        let os_version = Self::get_metadata(
-            &GetMetadataOpts::builder()
-                .image(oci_ref)
-                .platform(platform)
-                .build(),
-        )
-        .and_then(|inspection| {
-            trace!("{inspection:?}");
-            inspection.get_version().ok_or_else(|| {
-                miette!(
-                    "Failed to parse version from metadata for {}",
-                    oci_ref.to_string().bold()
-                )
+        let os_version = Self::get_metadata(GetMetadataOpts::builder().image(oci_ref).build())
+            .and_then(|inspection| {
+                trace!("{inspection:?}");
+                inspection.get_version().wrap_err_with(|| {
+                    format!(
+                        "Failed to parse version from metadata for {}",
+                        oci_ref.to_string().bold()
+                    )
+                })
             })
-        })
-        .or_else(|err| {
-            warn!("Unable to get version via image inspection due to error:\n{err:?}");
-            get_version_run_image(oci_ref)
-        })?;
+            .or_else(|err| {
+                warn!("Unable to get version via image inspection due to error:\n{err:?}");
+                get_version_run_image(oci_ref)
+            })?;
         trace!("os_version: {os_version}");
-        Ok(os_version)
+        Ok(os_version.major)
     }
 
     pub fn get_build_driver() -> BuildDriverType {
@@ -247,6 +264,10 @@ impl Driver {
     pub fn get_ci_driver() -> CiDriverType {
         impl_driver_type!(SELECTED_CI_DRIVER)
     }
+
+    pub fn get_boot_driver() -> BootDriverType {
+        impl_driver_type!(SELECTED_BOOT_DRIVER)
+    }
 }
 
 #[cached(
@@ -255,7 +276,7 @@ impl Driver {
     convert = r#"{ oci_ref.to_string() }"#,
     sync_writes = "by_key"
 )]
-fn get_version_run_image(oci_ref: &Reference) -> Result<u64> {
+fn get_version_run_image(oci_ref: &Reference) -> Result<Version> {
     warn!(concat!(
         "Pulling and running the image to retrieve the version. ",
         "This will take a while..."
@@ -278,9 +299,9 @@ fn get_version_run_image(oci_ref: &Reference) -> Result<u64> {
     };
 
     let output = Driver::run_output(
-        &RunOpts::builder()
-            .image(oci_ref.to_string())
-            .args(bon::vec![
+        RunOpts::builder()
+            .image(&oci_ref.to_string())
+            .args(&bon::vec![
                 "/bin/bash",
                 "-c",
                 r#"awk -F= '/^VERSION_ID=/ {gsub(/"/, "", $2); print $2}' /usr/lib/os-release"#,
@@ -291,16 +312,13 @@ fn get_version_run_image(oci_ref: &Reference) -> Result<u64> {
     )?;
 
     if should_remove {
-        Driver::remove_image(&RemoveImageOpts::builder().image(oci_ref).build())?;
+        Driver::remove_image(RemoveImageOpts::builder().image(oci_ref).build())?;
     }
 
     progress.finish_and_clear();
     Logger::multi_progress().remove(&progress);
 
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .parse::<Version>()?
-        .major)
+    String::from_utf8_lossy(&output.stdout).trim().parse()
 }
 
 macro_rules! impl_build_driver {
@@ -314,27 +332,27 @@ macro_rules! impl_build_driver {
 }
 
 impl BuildDriver for Driver {
-    fn build(opts: &BuildOpts) -> Result<()> {
+    fn build(opts: BuildOpts) -> Result<()> {
         impl_build_driver!(build(opts))
     }
 
-    fn tag(opts: &TagOpts) -> Result<()> {
+    fn tag(opts: TagOpts) -> Result<()> {
         impl_build_driver!(tag(opts))
     }
 
-    fn push(opts: &PushOpts) -> Result<()> {
+    fn push(opts: PushOpts) -> Result<()> {
         impl_build_driver!(push(opts))
     }
 
-    fn login() -> Result<()> {
-        impl_build_driver!(login())
+    fn login(server: &str) -> Result<()> {
+        impl_build_driver!(login(server))
     }
 
-    fn prune(opts: &opts::PruneOpts) -> Result<()> {
+    fn prune(opts: PruneOpts) -> Result<()> {
         impl_build_driver!(prune(opts))
     }
 
-    fn build_tag_push(opts: &BuildTagPushOpts) -> Result<Vec<String>> {
+    fn build_tag_push(opts: BuildTagPushOpts) -> Result<Vec<String>> {
         impl_build_driver!(build_tag_push(opts))
     }
 }
@@ -349,40 +367,30 @@ macro_rules! impl_signing_driver {
 }
 
 impl SigningDriver for Driver {
-    fn generate_key_pair(opts: &GenerateKeyPairOpts) -> Result<()> {
+    fn generate_key_pair(opts: GenerateKeyPairOpts) -> Result<()> {
         impl_signing_driver!(generate_key_pair(opts))
     }
 
-    fn check_signing_files(opts: &CheckKeyPairOpts) -> Result<()> {
+    fn check_signing_files(opts: CheckKeyPairOpts) -> Result<()> {
         impl_signing_driver!(check_signing_files(opts))
     }
 
-    fn sign(opts: &SignOpts) -> Result<()> {
+    fn sign(opts: SignOpts) -> Result<()> {
         impl_signing_driver!(sign(opts))
     }
 
-    fn verify(opts: &VerifyOpts) -> Result<()> {
+    fn verify(opts: VerifyOpts) -> Result<()> {
         impl_signing_driver!(verify(opts))
     }
 
-    fn signing_login() -> Result<()> {
-        impl_signing_driver!(signing_login())
+    fn signing_login(server: &str) -> Result<()> {
+        impl_signing_driver!(signing_login(server))
     }
 }
 
-macro_rules! impl_inspect_driver {
-    ($func:ident($($args:expr),*)) => {
-        match Self::get_inspect_driver() {
-            InspectDriverType::Skopeo => SkopeoDriver::$func($($args,)*),
-            InspectDriverType::Podman => PodmanDriver::$func($($args,)*),
-            InspectDriverType::Docker => DockerDriver::$func($($args,)*),
-        }
-    };
-}
-
 impl InspectDriver for Driver {
-    fn get_metadata(opts: &GetMetadataOpts) -> Result<ImageMetadata> {
-        impl_inspect_driver!(get_metadata(opts))
+    fn get_metadata(opts: GetMetadataOpts) -> Result<ImageMetadata> {
+        OciClientDriver::get_metadata(opts)
     }
 }
 
@@ -396,23 +404,23 @@ macro_rules! impl_run_driver {
 }
 
 impl RunDriver for Driver {
-    fn run(opts: &RunOpts) -> Result<ExitStatus> {
+    fn run(opts: RunOpts) -> Result<ExitStatus> {
         impl_run_driver!(run(opts))
     }
 
-    fn run_output(opts: &RunOpts) -> Result<Output> {
+    fn run_output(opts: RunOpts) -> Result<Output> {
         impl_run_driver!(run_output(opts))
     }
 
-    fn create_container(opts: &CreateContainerOpts) -> Result<types::ContainerId> {
+    fn create_container(opts: CreateContainerOpts) -> Result<types::ContainerId> {
         impl_run_driver!(create_container(opts))
     }
 
-    fn remove_container(opts: &RemoveContainerOpts) -> Result<()> {
+    fn remove_container(opts: RemoveContainerOpts) -> Result<()> {
         impl_run_driver!(remove_container(opts))
     }
 
-    fn remove_image(opts: &RemoveImageOpts) -> Result<()> {
+    fn remove_image(opts: RemoveImageOpts) -> Result<()> {
         impl_run_driver!(remove_image(opts))
     }
 
@@ -444,7 +452,7 @@ impl CiDriver for Driver {
         impl_ci_driver!(oidc_provider())
     }
 
-    fn generate_tags(opts: &GenerateTagsOpts) -> Result<Vec<String>> {
+    fn generate_tags(opts: GenerateTagsOpts) -> Result<Vec<String>> {
         impl_ci_driver!(generate_tags(opts))
     }
 
@@ -469,27 +477,52 @@ impl CiDriver for Driver {
 }
 
 impl ContainerMountDriver for Driver {
-    fn mount_container(opts: &opts::ContainerOpts) -> Result<types::MountId> {
+    fn mount_container(opts: ContainerOpts) -> Result<types::MountId> {
         PodmanDriver::mount_container(opts)
     }
 
-    fn unmount_container(opts: &opts::ContainerOpts) -> Result<()> {
+    fn unmount_container(opts: ContainerOpts) -> Result<()> {
         PodmanDriver::unmount_container(opts)
     }
 
-    fn remove_volume(opts: &opts::VolumeOpts) -> Result<()> {
+    fn remove_volume(opts: VolumeOpts) -> Result<()> {
         PodmanDriver::remove_volume(opts)
     }
 }
 
 impl OciCopy for Driver {
-    fn copy_oci_dir(opts: &opts::CopyOciDirOpts) -> Result<()> {
+    fn copy_oci_dir(opts: CopyOciDirOpts) -> Result<()> {
         SkopeoDriver::copy_oci_dir(opts)
     }
 }
 
 impl RechunkDriver for Driver {
-    fn rechunk(opts: &opts::RechunkOpts) -> Result<Vec<String>> {
+    fn rechunk(opts: RechunkOpts) -> Result<Vec<String>> {
         PodmanDriver::rechunk(opts)
+    }
+}
+
+macro_rules! impl_boot_driver {
+    ($func:ident($($args:expr),*)) => {
+        match Self::get_boot_driver() {
+            #[cfg(feature = "bootc")]
+            BootDriverType::Bootc => BootcDriver::$func($($args,)*),
+            BootDriverType::RpmOstree => RpmOstreeDriver::$func($($args,)*),
+            BootDriverType::None => ::miette::bail!("Cannot perform boot operation when no boot driver exists."),
+        }
+    };
+}
+
+impl BootDriver for Driver {
+    fn status() -> Result<Box<dyn BootStatus>> {
+        impl_boot_driver!(status())
+    }
+
+    fn switch(opts: SwitchOpts) -> Result<()> {
+        impl_boot_driver!(switch(opts))
+    }
+
+    fn upgrade(opts: SwitchOpts) -> Result<()> {
+        impl_boot_driver!(upgrade(opts))
     }
 }

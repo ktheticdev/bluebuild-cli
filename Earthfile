@@ -12,7 +12,7 @@ all:
     WAIT
         BUILD --platform=linux/amd64 --platform=linux/arm64 +prebuild
     END
-    BUILD +build
+    BUILD +build-images-all
     BUILD ./integration-tests+all
 
 run-checks:
@@ -21,9 +21,6 @@ run-checks:
 
 build-images-all:
     BUILD --platform=linux/amd64 --platform=linux/arm64 +build-images
-
-build-scripts-all:
-    BUILD --platform=linux/amd64 --platform=linux/arm64 +build-scripts
 
 build-images:
     BUILD +blue-build-cli
@@ -109,50 +106,76 @@ common:
         rustup update
 
     WORKDIR /app
-    COPY --keep-ts --dir src/ template/ recipe/ utils/ process/ /app
-    COPY --keep-ts Cargo.* /app
-    COPY --keep-ts *.md /app
-    COPY --keep-ts LICENSE /app
-    COPY --keep-ts build.rs /app
-    COPY --keep-ts --dir .git/ /app
-    RUN touch build.rs
+    COPY --keep-ts --dir \
+        build.rs \
+        LICENSE \
+        *.md \
+        Cargo.* \
+        src/ \
+        template/ \
+        recipe/ \
+        utils/ \
+        process/ \
+        scripts/ \
+        .git/ \
+        /app
 
     DO rust+INIT --keep_fingerprints=true
 
-build-scripts:
-    ARG BASE_IMAGE="alpine"
-    FROM $BASE_IMAGE
-
-    COPY --platform=native (+digest/base-image-digest --BASE_IMAGE=$BASE_IMAGE) /base-image-digest
-    LABEL org.opencontainers.image.base.name="$BASE_IMAGE"
-    LABEL org.opencontainers.image.base.digest="$(cat /base-image-digest)"
-
-    COPY --dir scripts/ /
-    FOR script IN "$(ls /scripts | grep -e '.*\.sh$')"
-        RUN echo "Making ${script} executable" && \
-        chmod +x "scripts/${script}"
-    END
-
-    DO --pass-args +SAVE_IMAGE --IMAGE="$IMAGE/build-scripts"
-
 blue-build-cli-prebuild:
-    ARG BASE_IMAGE="registry.fedoraproject.org/fedora-toolbox"
+    ARG BASE_IMAGE="registry.fedoraproject.org/fedora-toolbox:42"
     FROM "$BASE_IMAGE"
 
-    RUN dnf -y install dnf-plugins-core \
-        && dnf config-manager addrepo \
+    RUN dnf5 -y update \
+        && dnf5 -y reinstall shadow-utils \
+        && dnf5 -y install dnf5-plugins \
+        && dnf5 config-manager addrepo \
             --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo \
-        && dnf install --refresh -y docker-ce docker-ce-cli containerd.io \
+        && dnf5 -y install --refresh \
+            docker-ce docker-ce-cli containerd.io \
             docker-buildx-plugin docker-compose-plugin \
-            buildah podman skopeo dumb-init git
+            buildah podman skopeo dumb-init git fuse-overlayfs \
+            containers-common rpm-ostree bootc \
+        && rm -rf /var/cache /var/log/dnf* /var/log/yum.*
 
-    ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+    COPY image_files/containers.conf /etc/containers/
+    COPY image_files/entrypoint.sh /entrypoint.sh
 
+    RUN chmod 644 /etc/containers/containers.conf \
+        && chmod +x /entrypoint.sh
+
+    RUN sed -e 's|^#mount_program|mount_program|g' \
+        -e '/additionalimage.*/a "/var/lib/shared",' \
+        -e 's|^mountopt[[:space:]]*=.*$|mountopt = "nodev,fsync=0"|g' \
+        /usr/share/containers/storage.conf \
+        > /etc/containers/storage.conf
+
+    # Setup internal Podman to pass subscriptions down from host to internal container
+    RUN printf '/run/secrets/etc-pki-entitlement:/run/secrets/etc-pki-entitlement\n/run/secrets/rhsm:/run/secrets/rhsm\n' \
+        > /etc/containers/mounts.conf
+
+    COPY +cosign/cosign /usr/bin/cosign
     COPY --platform=native (+digest/base-image-digest --BASE_IMAGE=$BASE_IMAGE) /base-image-digest
+
     LABEL org.opencontainers.image.base.name="$BASE_IMAGE"
     LABEL org.opencontainers.image.base.digest="$(cat /base-image-digest)"
 
-    COPY +cosign/cosign /usr/bin/cosign
+    VOLUME /var/lib/containers
+
+    RUN mkdir -p \
+            /var/lib/shared/overlay-images \
+            /var/lib/shared/overlay-layers \
+            /var/lib/shared/vfs-images \
+            /var/lib/shared/vfs-layers \
+        && touch /var/lib/shared/overlay-images/images.lock \
+        && touch /var/lib/shared/overlay-layers/layers.lock \
+        && touch /var/lib/shared/vfs-images/images.lock \
+        && touch /var/lib/shared/vfs-layers/layers.lock
+
+    ENV _CONTAINERS_USERNS_CONFIGURED=""
+    ENV BUILDAH_ISOLATION="chroot"
+
+    ENTRYPOINT ["/entrypoint.sh"]
 
     ARG EARTHLY_GIT_HASH
     ARG TARGETARCH
@@ -170,15 +193,9 @@ blue-build-cli:
         FROM +blue-build-cli-prebuild
     END
 
-    IF [ "$TARGETARCH" = "arm64" ]
-        DO +INSTALL --OUT_DIR="/usr/bin/" --BUILD_TARGET="aarch64-unknown-linux-gnu" --RELEASE=$RELEASE
-    ELSE
-        DO +INSTALL --OUT_DIR="/usr/bin/" --BUILD_TARGET="x86_64-unknown-linux-gnu" --RELEASE=$RELEASE
-    END
+    DO +INSTALL --OUT_DIR="/usr/bin/" --BUILD_TARGET="$(uname -m)-unknown-linux-gnu" --RELEASE=$RELEASE
 
-    RUN mkdir -p /bluebuild
     WORKDIR /bluebuild
-    CMD ["bluebuild"]
 
     DO --pass-args +SAVE_IMAGE
 
@@ -216,11 +233,7 @@ blue-build-cli-distrobox:
     ARG TARGETARCH
     FROM "$IMAGE:$EARTHLY_GIT_HASH-distrobox-prebuild-$TARGETARCH"
 
-    IF [ "$TARGETARCH" = "arm64" ]
-        DO +INSTALL --OUT_DIR="/usr/bin/" --BUILD_TARGET="aarch64-unknown-linux-musl"
-    ELSE
-        DO +INSTALL --OUT_DIR="/usr/bin/" --BUILD_TARGET="x86_64-unknown-linux-musl"
-    END
+    DO +INSTALL --OUT_DIR="/usr/bin/" --BUILD_TARGET="$(uname -m)-unknown-linux-musl"
 
     DO --pass-args +SAVE_IMAGE --SUFFIX="-distrobox"
 
@@ -247,7 +260,7 @@ installer:
     SAVE ARTIFACT /out/bluebuild
 
 cosign:
-    FROM ghcr.io/sigstore/cosign/cosign:v2.5.3
+    FROM ghcr.io/sigstore/cosign/cosign:v2.6.1
     SAVE ARTIFACT /ko-app/cosign
 
 digest:
@@ -257,7 +270,7 @@ digest:
     ARG --required BASE_IMAGE
     RUN skopeo inspect "docker://$BASE_IMAGE" | jq -r '.Digest' > /base-image-digest
     SAVE ARTIFACT /base-image-digest
-    
+
 version:
     FROM rust
 

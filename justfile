@@ -115,18 +115,18 @@ release *args:
 
   VERSION=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "blue-build") .version')
   echo "Pushing tag: v${VERSION}"
-  git tag "v${VERSION}"
+  git tag -m "v${VERSION}" "v${VERSION}"
   git push origin "v${VERSION}"
   gh release create --generate-notes --latest "v${VERSION}"
 
-should_push := if env('GITHUB_ACTIONS', '') != '' { 
+should_push := if env('GITHUB_ACTIONS', '') != '' {
   if env('COSIGN_PRIVATE_KEY', '') != '' {
     '--push'
   } else {
     ''
   }
-} else { 
-  '' 
+} else {
+  ''
 }
 
 cargo_bin := if env('CARGO_HOME', '') != '' {
@@ -148,7 +148,6 @@ test-docker-build: generate-test-secret install-debug-all-features
   && bluebuild build \
     --retry-push \
     -B docker \
-    -I docker \
     -S sigstore \
     {{ should_push }} \
     -vv \
@@ -159,7 +158,6 @@ test-empty-files-build: generate-test-secret install-debug-all-features
   && bluebuild build \
     --retry-push \
     -B docker \
-    -I docker \
     -S sigstore \
     {{ should_push }} \
     -vv
@@ -207,7 +205,6 @@ test-podman-build: generate-test-secret install-debug-all-features
   && bluebuild build \
     --retry-push \
     -B podman \
-    -I podman \
     -S sigstore \
     {{ should_push }} \
     -vv \
@@ -219,7 +216,6 @@ test-buildah-build: generate-test-secret install-debug-all-features
   && bluebuild build \
     --retry-push \
     -B buildah \
-    -I podman \
     -S sigstore \
     {{ should_push }} \
     -vv \
@@ -240,3 +236,28 @@ test-generate-iso-recipe: generate-test-secret install-debug-all-features
   cd integration-tests/test-repo
   bluebuild generate-iso -vv --output-dir "$ISO_OUT" recipe recipes/recipe.yml
 
+# Build a local cli image
+build-local-cli-image:
+  earthly --ci --output -P +blue-build-cli --RELEASE='false'
+
+git_sha := `git rev-parse HEAD`
+tty_arg := `[ -t 0 ] && echo "t" || echo ""`
+
+# Run a command in the cli container
+exec-cli-container +args: build-local-cli-image
+  docker run -i{{ tty_arg }} --privileged --rm \
+    -v ./integration-tests/test-repo:/bluebuild \
+    -e TEST_SECRET="$TEST_SECRET" \
+    ghcr.io/blue-build/cli:{{ git_sha }} \
+    {{ args }}
+
+# Run a cli container using the podman build driver
+test-container-podman-build: \
+  generate-test-secret \
+  (exec-cli-container "bluebuild" "build" "-B" "podman" "--squash" "-vv")
+
+# Run a cli container using the podman build driver with rechunk
+test-container-podman-rechunk: \
+  generate-test-secret \
+  (exec-cli-container "bluebuild" "build" "-B" \
+    "podman" "-vv" "--rechunk" "recipes/recipe-rechunk.yml")

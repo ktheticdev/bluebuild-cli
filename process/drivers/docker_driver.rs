@@ -12,7 +12,7 @@ use blue_build_utils::{
     semver::Version,
     string_vec,
 };
-use cached::proc_macro::{cached, once};
+use cached::proc_macro::once;
 use colored::Colorize;
 use comlexr::{cmd, pipe};
 use log::{debug, info, trace, warn};
@@ -21,22 +21,19 @@ use oci_distribution::Reference;
 use serde::Deserialize;
 use tempfile::TempDir;
 
-mod metadata;
-
 use crate::{
     drivers::{
         opts::{
-            BuildOpts, BuildTagPushOpts, GetMetadataOpts, PushOpts, RunOpts, RunOptsEnv,
-            RunOptsVolume, TagOpts,
+            BuildOpts, BuildTagPushOpts, PushOpts, RunOpts, RunOptsEnv, RunOptsVolume, TagOpts,
         },
-        traits::{BuildDriver, DriverVersion, InspectDriver, RunDriver},
-        types::{ContainerId, ImageMetadata, ImageRef, Platform},
+        traits::{BuildDriver, DriverVersion, RunDriver},
+        types::{ContainerId, ImageRef},
     },
     logging::CommandLogging,
     signal_handler::{ContainerRuntime, ContainerSignalId, add_cid, remove_cid},
 };
 
-use super::opts::{CreateContainerOpts, RemoveContainerOpts, RemoveImageOpts};
+use super::opts::{CreateContainerOpts, PruneOpts, RemoveContainerOpts, RemoveImageOpts};
 
 #[derive(Debug, Deserialize)]
 struct VerisonJsonClient {
@@ -192,7 +189,7 @@ impl DriverVersion for DockerDriver {
 }
 
 impl BuildDriver for DockerDriver {
-    fn build(opts: &BuildOpts) -> Result<()> {
+    fn build(opts: BuildOpts) -> Result<()> {
         trace!("DockerDriver::build({opts:#?})");
 
         let temp_dir = TempDir::new()
@@ -207,14 +204,15 @@ impl BuildDriver for DockerDriver {
             let c = cmd!(
                 "docker",
                 "build",
-                if !matches!(opts.platform, Platform::Native) => [
+                if let Some(platform) = opts.platform => [
                     "--platform",
-                    opts.platform.to_string(),
+                    platform.to_string(),
                 ],
                 "-t",
                 opts.image.to_string(),
                 "-f",
                 for opts.secrets.args(&temp_dir)?,
+                if opts.secrets.ssh() => "--ssh",
                 if let Some(cache_from) = opts.cache_from.as_ref() => [
                     "--cache-from",
                     format!(
@@ -231,7 +229,7 @@ impl BuildDriver for DockerDriver {
                         repository = cache_to.repository(),
                     ),
                 ],
-                &*opts.containerfile,
+                opts.containerfile,
                 ".",
             );
             trace!("{c:?}");
@@ -248,7 +246,7 @@ impl BuildDriver for DockerDriver {
         Ok(())
     }
 
-    fn tag(opts: &TagOpts) -> Result<()> {
+    fn tag(opts: TagOpts) -> Result<()> {
         trace!("DockerDriver::tag({opts:#?})");
 
         let dest_image_str = opts.dest_image.to_string();
@@ -269,7 +267,7 @@ impl BuildDriver for DockerDriver {
         Ok(())
     }
 
-    fn push(opts: &PushOpts) -> Result<()> {
+    fn push(opts: PushOpts) -> Result<()> {
         trace!("DockerDriver::push({opts:#?})");
 
         let image_str = opts.image.to_string();
@@ -290,25 +288,20 @@ impl BuildDriver for DockerDriver {
         Ok(())
     }
 
-    fn login() -> Result<()> {
+    fn login(server: &str) -> Result<()> {
         trace!("DockerDriver::login()");
 
-        if let Some(Credentials {
-            registry,
-            username,
-            password,
-        }) = Credentials::get()
-        {
+        if let Some(Credentials::Basic { username, password }) = Credentials::get(server) {
             let output = pipe!(
-                stdin = password;
+                stdin = password.value();
                 {
                     let c = cmd!(
                         "docker",
                         "login",
                         "-u",
-                        username,
+                        &username,
                         "--password-stdin",
-                        registry,
+                        server,
                     );
                     trace!("{c:?}");
                     c
@@ -321,13 +314,13 @@ impl BuildDriver for DockerDriver {
                 let err_out = String::from_utf8_lossy(&output.stderr);
                 bail!("Failed to login for docker:\n{}", err_out.trim());
             }
-            debug!("Logged into {registry}");
+            debug!("Logged into {server}");
         }
 
         Ok(())
     }
 
-    fn prune(opts: &super::opts::PruneOpts) -> Result<()> {
+    fn prune(opts: PruneOpts) -> Result<()> {
         trace!("DockerDriver::prune({opts:?})");
 
         let (system, buildx) = std::thread::scope(
@@ -384,7 +377,7 @@ impl BuildDriver for DockerDriver {
         Ok(())
     }
 
-    fn build_tag_push(opts: &BuildTagPushOpts) -> Result<Vec<String>> {
+    fn build_tag_push(opts: BuildTagPushOpts) -> Result<Vec<String>> {
         trace!("DockerDriver::build_tag_push({opts:#?})");
 
         let temp_dir = TempDir::new()
@@ -419,7 +412,7 @@ impl BuildDriver for DockerDriver {
 }
 
 fn build_tag_push_cmd(
-    opts: &BuildTagPushOpts<'_>,
+    opts: BuildTagPushOpts<'_>,
     first_image: &str,
     temp_dir: &TempDir,
 ) -> Result<Command> {
@@ -430,6 +423,7 @@ fn build_tag_push_cmd(
         "build",
         ".",
         for opts.secrets.args(temp_dir)?,
+        if opts.secrets.ssh() => "--ssh",
         match &opts.image {
             ImageRef::Remote(_remote) if opts.push => [
                 "--output",
@@ -454,12 +448,12 @@ fn build_tag_push_cmd(
                 }).collect()
             }),
         "--pull",
-        if !matches!(opts.platform, Platform::Native) => [
+        if let Some(platform) = opts.platform => [
             "--platform",
-            opts.platform.to_string(),
+            platform.to_string(),
         ],
         "-f",
-        &*opts.containerfile,
+        opts.containerfile,
         if let Some(cache_from) = opts.cache_from.as_ref() => [
             "--cache-from",
             format!(
@@ -477,7 +471,7 @@ fn build_tag_push_cmd(
     Ok(c)
 }
 
-fn get_final_images(opts: &BuildTagPushOpts<'_>) -> Vec<String> {
+fn get_final_images(opts: BuildTagPushOpts<'_>) -> Vec<String> {
     match &opts.image {
         ImageRef::Remote(image) => {
             if opts.tags.is_empty() {
@@ -493,59 +487,14 @@ fn get_final_images(opts: &BuildTagPushOpts<'_>) -> Vec<String> {
         ImageRef::LocalTar(archive_path) => {
             string_vec![archive_path.display().to_string()]
         }
+        ImageRef::Other(other) => {
+            string_vec![&**other]
+        }
     }
-}
-
-impl InspectDriver for DockerDriver {
-    fn get_metadata(opts: &GetMetadataOpts) -> Result<ImageMetadata> {
-        get_metadata_cache(opts)
-    }
-}
-
-#[cached(
-    result = true,
-    key = "String",
-    convert = r#"{ format!("{}-{}", opts.image, opts.platform)}"#,
-    sync_writes = "by_key"
-)]
-fn get_metadata_cache(opts: &GetMetadataOpts) -> Result<ImageMetadata> {
-    trace!("DockerDriver::get_metadata({opts:#?})");
-    let image_str = opts.image.to_string();
-
-    DockerDriver::setup()?;
-
-    let output = {
-        let c = cmd!(
-            "docker",
-            "buildx",
-            format!("--builder={BLUE_BUILD}"),
-            "imagetools",
-            "inspect",
-            "--format",
-            "{{json .}}",
-            &image_str,
-        );
-        trace!("{c:?}");
-        c
-    }
-    .output()
-    .into_diagnostic()?;
-
-    if output.status.success() {
-        info!("Successfully inspected image {}!", image_str.bold().green());
-    } else {
-        bail!("Failed to inspect image {}", image_str.bold().red())
-    }
-
-    serde_json::from_slice::<metadata::Metadata>(&output.stdout)
-        .into_diagnostic()
-        .inspect(|metadata| trace!("{metadata:#?}"))
-        .and_then(|metadata| ImageMetadata::try_from((metadata, opts.platform)))
-        .inspect(|metadata| trace!("{metadata:#?}"))
 }
 
 impl RunDriver for DockerDriver {
-    fn run(opts: &RunOpts) -> Result<ExitStatus> {
+    fn run(opts: RunOpts) -> Result<ExitStatus> {
         trace!("DockerDriver::run({opts:#?})");
 
         let cid_path = TempDir::new().into_diagnostic()?;
@@ -555,7 +504,7 @@ impl RunDriver for DockerDriver {
         add_cid(&cid);
 
         let status = docker_run(opts, &cid_file)
-            .build_status(&*opts.image, "Running container")
+            .build_status(opts.image, "Running container")
             .into_diagnostic()?;
 
         remove_cid(&cid);
@@ -563,7 +512,7 @@ impl RunDriver for DockerDriver {
         Ok(status)
     }
 
-    fn run_output(opts: &RunOpts) -> Result<std::process::Output> {
+    fn run_output(opts: RunOpts) -> Result<std::process::Output> {
         trace!("DockerDriver::run({opts:#?})");
 
         let cid_path = TempDir::new().into_diagnostic()?;
@@ -579,7 +528,7 @@ impl RunDriver for DockerDriver {
         Ok(output)
     }
 
-    fn create_container(opts: &CreateContainerOpts) -> Result<super::types::ContainerId> {
+    fn create_container(opts: CreateContainerOpts) -> Result<super::types::ContainerId> {
         trace!("DockerDriver::create_container({opts:?})");
 
         let output = {
@@ -599,7 +548,7 @@ impl RunDriver for DockerDriver {
         ))
     }
 
-    fn remove_container(opts: &RemoveContainerOpts) -> Result<()> {
+    fn remove_container(opts: RemoveContainerOpts) -> Result<()> {
         trace!("DockerDriver::remove_container({opts:?})");
 
         let output = {
@@ -617,7 +566,7 @@ impl RunDriver for DockerDriver {
         Ok(())
     }
 
-    fn remove_image(opts: &RemoveImageOpts) -> Result<()> {
+    fn remove_image(opts: RemoveImageOpts) -> Result<()> {
         trace!("DockerDriver::remove_image({opts:?})");
 
         let output = {
@@ -673,7 +622,7 @@ impl RunDriver for DockerDriver {
     }
 }
 
-fn docker_run(opts: &RunOpts, cid_file: &Path) -> Command {
+fn docker_run(opts: RunOpts, cid_file: &Path) -> Command {
     let command = cmd!(
         "docker",
         "run",
@@ -691,7 +640,7 @@ fn docker_run(opts: &RunOpts, cid_file: &Path) -> Command {
             "--env",
             format!("{key}={value}"),
         ],
-        &*opts.image,
+        opts.image,
         for arg in opts.args.iter() => &**arg,
     );
     trace!("{command:?}");
