@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 use blue_build_utils::secret::Secret;
 use bon::Builder;
@@ -12,6 +12,7 @@ use super::CompressionType;
 pub struct RechunkOpts<'scope> {
     pub image: &'scope str,
     pub containerfile: &'scope Path,
+    pub labels: &'scope BTreeMap<String, String>,
 
     pub platform: Option<Platform>,
     pub version: &'scope str,

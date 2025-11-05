@@ -23,9 +23,8 @@ use blake2::{
     digest::{Update, VariableOutput},
 };
 use cached::proc_macro::once;
-use chrono::Local;
+use chrono::{Local, Utc};
 use comlexr::cmd;
-use format_serde_error::SerdeError;
 use log::{trace, warn};
 use miette::{Context, IntoDiagnostic, Result, miette};
 use uuid::Uuid;
@@ -57,23 +56,6 @@ pub fn check_command_exists(command: &str) -> Result<()> {
         Err(miette!(
             "Command {command} doesn't exist and is required to build the image"
         ))
-    }
-}
-
-/// Creates a serde error for displaying the file
-/// and where the error occurred.
-pub fn serde_yaml_err(contents: &str) -> impl Fn(serde_yaml::Error) -> SerdeError + '_ {
-    |err: serde_yaml::Error| {
-        let location = err.location();
-        let location = location.as_ref();
-        SerdeError::new(
-            contents.to_string(),
-            (
-                err.into(),
-                location.map_or(0, serde_yaml::Location::line).into(),
-                location.map_or(0, serde_yaml::Location::column).into(),
-            ),
-        )
     }
 }
 
@@ -171,4 +153,9 @@ pub fn has_env_var(key: &str) -> bool {
 #[must_use]
 pub fn running_as_root() -> bool {
     nix::unistd::Uid::effective().is_root()
+}
+
+#[must_use]
+pub fn current_timestamp() -> String {
+    Utc::now().to_rfc3339()
 }

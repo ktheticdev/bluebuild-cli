@@ -11,10 +11,14 @@ on:
         type: string
     secrets:
       TEST_SIGNING_SECRET:
+        required: true
+        description: The cosign private key used to sign images for tests
 env:
   FORCE_COLOR: 1
   CLICOLOR_FORCE: 1
   RUST_LOG_STYLE: always
+
+permissions: {}
 
 jobs:
   test:
@@ -62,7 +66,7 @@ jobs:
 
   integration-tests:
     permissions:
-      packages: write
+      packages: write # needed to write integ test packages
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
@@ -92,9 +96,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -117,8 +121,7 @@ jobs:
           ref: ${{ inputs.ref }}
           repository: ${{ inputs.repo }}
 
-
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -131,9 +134,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -157,7 +160,7 @@ jobs:
           repository: ${{ inputs.repo }}
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -170,9 +173,9 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -193,7 +196,7 @@ jobs:
           repository: ${{ inputs.repo }}
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -210,9 +213,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     # runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -238,7 +241,7 @@ jobs:
           repository: ${{ inputs.repo }}
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -251,9 +254,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -287,7 +290,7 @@ jobs:
 
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -300,9 +303,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -322,7 +325,7 @@ jobs:
 
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -335,9 +338,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -357,7 +360,7 @@ jobs:
 
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -370,9 +373,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -395,7 +398,7 @@ jobs:
           repository: ${{ inputs.repo }}
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -408,9 +411,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -433,7 +436,7 @@ jobs:
           repository: ${{ inputs.repo }}
 
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -446,9 +449,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -470,7 +473,7 @@ jobs:
           ref: ${{ inputs.ref }}
           repository: ${{ inputs.repo }}
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
@@ -483,9 +486,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
 
     steps:
       - name: Maximize build space
@@ -507,7 +510,7 @@ jobs:
           ref: ${{ inputs.ref }}
           repository: ${{ inputs.repo }}
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Run Build
         env:
