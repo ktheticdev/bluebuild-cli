@@ -97,7 +97,7 @@ pub const SUDO_ASKPASS: &str = "SUDO_ASKPASS";
 // Misc
 pub const BLUE_BUILD: &str = "bluebuild";
 pub const BUILD_SCRIPTS_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli/build-scripts";
-pub const BLUE_BULID_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli";
+pub const BLUE_BUILD_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli";
 pub const BLUE_BUILD_MODULE_IMAGE_REF: &str = "ghcr.io/blue-build/modules";
 pub const BLUE_BUILD_SCRIPTS_DIR_IGNORE: &str = "/.bluebuild-scripts_*";
 pub const COSIGN_IMAGE: &str = "ghcr.io/sigstore/cosign/cosign:v2.6.1";
@@ -118,8 +118,7 @@ pub const SCHEMA_BASE_URL: &str = "https://raw.githubusercontent.com/ktheticdev/
 pub const RECIPE_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/recipe-v1.json");
 pub const STAGE_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/stage-v1.json");
 pub const MODULE_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/module-v1.json");
-pub const MODULE_STAGE_LIST_V1_SCHEMA_URL: &str =
-    concat!(SCHEMA_BASE_URL, "/module-stage-list-v1.json");
+pub const MODULE_STAGE_LIST_V1_SCHEMA_URL: &str = concat!(SCHEMA_BASE_URL, "/module-stage-list-v1.json");
 
 // JSON Schema
 pub const JSON_SCHEMA: &str = "json-schema://";
@@ -128,6 +127,5 @@ pub const IMPORT_MODULE_SCHEMA: &str = concat!(JSON_SCHEMA, "/import-v1.json");
 pub const STAGE_SCHEMA: &str = concat!(JSON_SCHEMA, "/stage-v1.json");
 
 // Messages
-pub const BUG_REPORT_WARNING_MESSAGE: &str =
-    "Please copy the above report and open an issue manually.";
+pub const BUG_REPORT_WARNING_MESSAGE: &str = "Please copy the above report and open an issue manually.";
 pub const SUDO_PROMPT: &str = "Bluebuild requires your password for sudo operation";
