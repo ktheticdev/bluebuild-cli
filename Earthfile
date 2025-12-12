@@ -4,6 +4,7 @@ PROJECT ktheticdev/bluebuild-cli
 IMPORT github.com/blue-build/earthly-lib/rust AS rust
 # IMPORT ../earthly-lib/rust AS rust
 
+FROM alpine
 ARG --global IMAGE=ghcr.io/ktheticdev/bluebuild-cli
 ARG --global TAGGED="false"
 ARG --global LATEST="false"
@@ -24,13 +25,16 @@ build-images-all:
         BUILD --platform=linux/amd64 --platform=linux/arm64 +build-images
     END
 
-    FROM alpine
     ARG EARTHLY_PUSH
     IF [ "$EARTHLY_PUSH" = "true" ]
-        ARG SUFFIX_LIST="- distrobox installer"
-        BUILD --pass-args +digest-list
-        BUILD --pass-args +sign-images
+        BUILD --pass-args +sign-all
     END
+
+sign-all:
+    ARG SUFFIX_LIST="- distrobox installer"
+    BUILD --pass-args +sign-images
+    COPY --pass-args +digest-list/digest-list /
+    SAVE ARTIFACT /digest-list AS LOCAL ./digest-list
 
 build-images:
     BUILD +blue-build-cli
@@ -271,7 +275,7 @@ installer:
     SAVE ARTIFACT /out/bluebuild
 
 cosign:
-    FROM ghcr.io/sigstore/cosign/cosign:v2.6.1
+    FROM ghcr.io/sigstore/cosign/cosign:v3.0.2
     SAVE ARTIFACT /ko-app/cosign
 
 digest:
@@ -330,7 +334,7 @@ digest-list:
         DO +PRINT_IMAGE_DIGEST --IMAGE="${IMAGE}:${EARTHLY_GIT_HASH}${suffix}"
     END
 
-    SAVE ARTIFACT /digest-list AS LOCAL ./digest-list
+    SAVE ARTIFACT /digest-list
 
 sign-images:
     FROM alpine
@@ -349,7 +353,12 @@ sign-images:
 
     FOR digest IN $(cat /digest-list | sed -E "s|^${IMAGE}:[^,]+,(sha256:[a-f0-9]+)$|\1|g" | sort -u)
         RUN --push --secret COSIGN_PRIVATE_KEY \
-            cosign sign --key=env://COSIGN_PRIVATE_KEY --recursive "${IMAGE}@${digest}"
+            cosign sign \
+                --new-bundle-format=false \
+                --use-signing-config=false \
+                --key=env://COSIGN_PRIVATE_KEY \
+                --recursive \
+                "${IMAGE}@${digest}"
         RUN --push cosign verify --key=/cosign.pub "${IMAGE}@${digest}"
     END
 

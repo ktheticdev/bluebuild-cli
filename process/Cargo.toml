@@ -12,7 +12,7 @@ path = "process.rs"
 
 [dependencies]
 anyhow = "1.0.100"
-blue-build-utils = { version = "=0.9.24", path = "../utils" }
+blue-build-utils = { version = "=0.9.27", path = "../utils" }
 indicatif-log-bridge = "0.2.3"
 log4rs = { version = "1.4.0", features = ["background_rotation"] }
 nu-ansi-term = { version = "0.50.3", features = ["gnu_legacy"] }
@@ -21,17 +21,19 @@ rand = "0.9.2"
 signal-hook = { version = "0.3.18", features = ["extended-siginfo"] }
 sigstore = { version = "0.13.0", features = ["rustls-tls", "cached-client", "sigstore-trust-root", "sign", "cosign"], default-features = false }
 
+bon.workspace = true
 cached.workspace = true
 chrono.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 colored.workspace = true
 comlexr.workspace = true
-indicatif.workspace = true
 indexmap.workspace = true
+indicatif.workspace = true
 lazy-regex.workspace = true
 log.workspace = true
 miette.workspace = true
 nix = { workspace = true, features = ["signal"] }
+rayon.workspace = true
 oci-distribution.workspace = true
 reqwest.workspace = true
 semver.workspace = true
@@ -39,14 +41,14 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
-bon.workspace = true
 uuid.workspace = true
+which.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
 rstest.workspace = true
-blue-build-utils = { version = "=0.9.24", path = "../utils", features = ["test"]  }
+blue-build-utils = { version = "=0.9.27", path = "../utils", features = ["test"]  }
 
 [lints]
 workspace = true

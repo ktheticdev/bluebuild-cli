@@ -1,7 +1,7 @@
 export RUST_BACKTRACE := "1"
 export BB_CACHE_LAYERS := "true"
 export TEST_SECRET := "test123"
-# export BB_SKIP_VALIDATION := "true"
+export BB_SKIP_VALIDATION := "true"
 
 set dotenv-load := true
 set positional-arguments := true
@@ -140,7 +140,7 @@ generate-test-secret:
   echo "321tset" > integration-tests/test-repo/secrets/test-secret
 
 # Run all integration tests
-integration-tests: generate-test-secret test-docker-build test-empty-files-build test-arm64-build test-podman-build test-buildah-build test-generate-iso-image test-generate-iso-recipe
+integration-tests: generate-test-secret test-docker-build test-empty-files-build test-arm64-build test-podman-build test-buildah-build test-generate-iso-image test-generate-iso-recipe test-multiplatform
 
 # Run docker driver integration test
 test-docker-build: generate-test-secret install-debug-all-features
@@ -161,6 +161,24 @@ test-empty-files-build: generate-test-secret install-debug-all-features
     -S sigstore \
     {{ should_push }} \
     -vv
+
+test-bluefin-build: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    --retry-push \
+    -B docker \
+    -S sigstore \
+    {{ should_push }} \
+    -vv \
+    recipes/recipe-bluefin.yml
+
+test-build-chunked-oci-build: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    {{ should_push }} \
+    -vv \
+    --build-chunked-oci \
+    recipes/recipe-build-chunked-oci.yml
 
 test-rechunk-build: generate-test-secret install-debug-all-features
   cd integration-tests/test-repo \
@@ -221,12 +239,72 @@ test-buildah-build: generate-test-secret install-debug-all-features
     -vv \
     recipes/recipe-buildah.yml
 
+# Run the multi-platform builds
+test-multiplatform: test-multiplatform-docker test-multiplatform-podman test-multiplatform-buildah test-multiplatform-build-chunked-oci test-multiplatform-rechunk
+
+test-multiplatform-docker: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    --retry-push \
+    -B docker \
+    -S sigstore \
+    {{ should_push }} \
+    -vv \
+    recipes/recipe-multiplatform-docker.yml
+
+test-multiplatform-podman: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    --retry-push \
+    -B podman \
+    -S sigstore \
+    {{ should_push }} \
+    -vv \
+    recipes/recipe-multiplatform-podman.yml
+
+test-multiplatform-buildah: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    --retry-push \
+    -B buildah \
+    -S sigstore \
+    {{ should_push }} \
+    -vv \
+    recipes/recipe-multiplatform-buildah.yml
+
+test-multiplatform-build-chunked-oci: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    --retry-push \
+    --build-chunked-oci \
+    -S sigstore \
+    {{ should_push }} \
+    -vv \
+    recipes/recipe-multiplatform-build-chunked-oci.yml
+
+test-multiplatform-rechunk: generate-test-secret install-debug-all-features
+  cd integration-tests/test-repo \
+  && bluebuild build \
+    --retry-push \
+    --rechunk \
+    -S sigstore \
+    {{ should_push }} \
+    -vv \
+    recipes/recipe-multiplatform-rechunk.yml
+
 # Run ISO generator for images
 test-generate-iso-image: generate-test-secret install-debug-all-features
   #!/usr/bin/env bash
   set -eu
   ISO_OUT=$(mktemp -d)
-  bluebuild generate-iso -vv --output-dir "$ISO_OUT" image ghcr.io/ktheticdev/bluebuild-cli/test:40
+  bluebuild generate-iso -vv --output-dir "$ISO_OUT" image ghcr.io/ktheticdev/bluebuild-cli/test:latest
+
+# Run ISO generator for images using web-ui
+test-generate-iso-web-ui: generate-test-secret install-debug-all-features
+  #!/usr/bin/env bash
+  set -eu
+  ISO_OUT=$(mktemp -d)
+  bluebuild generate-iso -vv --output-dir "$ISO_OUT" --web-ui image ghcr.io/ktheticdev/bluebuild-cli/test:latest
 
 # Run ISO generator for images
 test-generate-iso-recipe: generate-test-secret install-debug-all-features
@@ -255,6 +333,12 @@ exec-cli-container +args: build-local-cli-image
 test-container-podman-build: \
   generate-test-secret \
   (exec-cli-container "bluebuild" "build" "-B" "podman" "--squash" "-vv")
+
+# Run a cli container using the podman build driver with build-chunked-oci
+test-container-podman-build-chunked-oci: \
+  generate-test-secret \
+  (exec-cli-container "bluebuild" "build" "-B" \
+    "podman" "-vv" "--build-chunked-oci" "recipes/recipe-build-chunked-oci.yml")
 
 # Run a cli container using the podman build driver with rechunk
 test-container-podman-rechunk: \

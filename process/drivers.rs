@@ -8,6 +8,7 @@
 
 use std::{
     borrow::Borrow,
+    ffi::OsString,
     fmt::Debug,
     process::{ExitStatus, Output},
     sync::{LazyLock, RwLock, atomic::AtomicBool},
@@ -19,6 +20,7 @@ use blue_build_utils::{
     constants::{
         BB_BOOT_DRIVER, BB_BUILD_DRIVER, BB_INSPECT_DRIVER, BB_RUN_DRIVER, BB_SIGNING_DRIVER,
     },
+    container::{ContainerId, ImageRef, MountId, Tag},
     semver::Version,
 };
 use bon::{Builder, bon};
@@ -30,10 +32,10 @@ use log::{info, trace, warn};
 use miette::{Context, Result};
 use oci_distribution::Reference;
 use opts::{
-    BuildOpts, BuildTagPushOpts, CheckKeyPairOpts, ContainerOpts, CopyOciDirOpts,
-    CreateContainerOpts, GenerateImageNameOpts, GenerateKeyPairOpts, GenerateTagsOpts,
-    GetMetadataOpts, PruneOpts, PushOpts, RechunkOpts, RemoveContainerOpts, RemoveImageOpts,
-    RunOpts, SignOpts, SwitchOpts, TagOpts, VerifyOpts, VolumeOpts,
+    BuildChunkedOciOpts, BuildOpts, BuildRechunkTagPushOpts, BuildTagPushOpts, CheckKeyPairOpts,
+    ContainerOpts, CopyOciDirOpts, CreateContainerOpts, GenerateImageNameOpts, GenerateKeyPairOpts,
+    GenerateTagsOpts, GetMetadataOpts, PruneOpts, PushOpts, RechunkOpts, RemoveContainerOpts,
+    RemoveImageOpts, RunOpts, SignOpts, SwitchOpts, TagOpts, VerifyOpts, VolumeOpts,
 };
 use types::{
     BootDriverType, BuildDriverType, CiDriverType, ImageMetadata, InspectDriverType, RunDriverType,
@@ -41,7 +43,11 @@ use types::{
 };
 use uuid::Uuid;
 
-use crate::{drivers::oci_client::OciClientDriver, logging::Logger};
+use crate::{
+    drivers::oci_client::OciClientDriver,
+    drivers::opts::{ManifestCreateOpts, ManifestPushOpts},
+    logging::Logger,
+};
 
 pub use self::{
     buildah_driver::BuildahDriver, cosign_driver::CosignDriver, docker_driver::DockerDriver,
@@ -73,8 +79,6 @@ pub mod types;
 
 static INIT: AtomicBool = AtomicBool::new(false);
 static SELECTED_BUILD_DRIVER: LazyLock<RwLock<Option<BuildDriverType>>> =
-    LazyLock::new(|| RwLock::new(None));
-static SELECTED_INSPECT_DRIVER: LazyLock<RwLock<Option<InspectDriverType>>> =
     LazyLock::new(|| RwLock::new(None));
 static SELECTED_RUN_DRIVER: LazyLock<RwLock<Option<RunDriverType>>> =
     LazyLock::new(|| RwLock::new(None));
@@ -186,7 +190,6 @@ impl Driver {
             args.run_driver => SELECTED_RUN_DRIVER;
             args.signing_driver => SELECTED_SIGNING_DRIVER;
             args.boot_driver => SELECTED_BOOT_DRIVER;
-            default => SELECTED_INSPECT_DRIVER;
             default => SELECTED_CI_DRIVER;
         }
     }
@@ -247,10 +250,6 @@ impl Driver {
 
     pub fn get_build_driver() -> BuildDriverType {
         impl_driver_type!(SELECTED_BUILD_DRIVER)
-    }
-
-    pub fn get_inspect_driver() -> InspectDriverType {
-        impl_driver_type!(SELECTED_INSPECT_DRIVER)
     }
 
     pub fn get_signing_driver() -> SigningDriverType {
@@ -352,6 +351,14 @@ impl BuildDriver for Driver {
         impl_build_driver!(prune(opts))
     }
 
+    fn manifest_create(opts: ManifestCreateOpts) -> Result<()> {
+        impl_build_driver!(manifest_create(opts))
+    }
+
+    fn manifest_push(opts: ManifestPushOpts) -> Result<()> {
+        impl_build_driver!(manifest_push(opts))
+    }
+
     fn build_tag_push(opts: BuildTagPushOpts) -> Result<Vec<String>> {
         impl_build_driver!(build_tag_push(opts))
     }
@@ -412,7 +419,7 @@ impl RunDriver for Driver {
         impl_run_driver!(run_output(opts))
     }
 
-    fn create_container(opts: CreateContainerOpts) -> Result<types::ContainerId> {
+    fn create_container(opts: CreateContainerOpts) -> Result<ContainerId> {
         impl_run_driver!(create_container(opts))
     }
 
@@ -452,7 +459,7 @@ impl CiDriver for Driver {
         impl_ci_driver!(oidc_provider())
     }
 
-    fn generate_tags(opts: GenerateTagsOpts) -> Result<Vec<String>> {
+    fn generate_tags(opts: GenerateTagsOpts) -> Result<Vec<Tag>> {
         impl_ci_driver!(generate_tags(opts))
     }
 
@@ -476,8 +483,30 @@ impl CiDriver for Driver {
     }
 }
 
+impl BuildChunkedOciDriver for Driver {
+    fn setup_rpm_ostree() -> Result<()> {
+        PodmanDriver::setup_rpm_ostree()
+    }
+
+    fn rpm_ostree_command() -> Result<(OsString, Vec<OsString>)> {
+        PodmanDriver::rpm_ostree_command()
+    }
+
+    fn build_chunked_oci(
+        unchunked_image: &ImageRef<'_>,
+        final_image: &ImageRef<'_>,
+        opts: BuildChunkedOciOpts,
+    ) -> Result<()> {
+        PodmanDriver::build_chunked_oci(unchunked_image, final_image, opts)
+    }
+
+    fn build_rechunk_tag_push(opts: BuildRechunkTagPushOpts) -> Result<Vec<String>> {
+        PodmanDriver::build_rechunk_tag_push(opts)
+    }
+}
+
 impl ContainerMountDriver for Driver {
-    fn mount_container(opts: ContainerOpts) -> Result<types::MountId> {
+    fn mount_container(opts: ContainerOpts) -> Result<MountId> {
         PodmanDriver::mount_container(opts)
     }
 

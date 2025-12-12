@@ -7,7 +7,7 @@ edition = "2024"
 repository = "https://github.com/ktheticdev/bluebuild-cli"
 license = "Apache-2.0"
 categories = ["command-line-utilities"]
-version = "0.9.24"
+version = "0.9.27"
 
 [workspace.dependencies]
 bon = "3.8.1"
@@ -16,7 +16,7 @@ chrono = "0.4.42"
 clap = "4.5.50"
 colored = "3.0.0"
 comlexr = "1.4.2"
-indexmap = { version = "2.12.0", features = ["serde"] }
+indexmap = { version = "2.12.1", features = ["serde"] }
 indicatif = { version = "0.18.2", features = ["improved_unicode", "rayon"] }
 lazy-regex = "3.4.1"
 log = "0.4.28"
@@ -24,6 +24,7 @@ miette = "7.6.0"
 nix = { version = "0.30.1" }
 oci-distribution = { package = "oci-client", version = "0.15.0", default-features = false }
 pretty_assertions = "1.4.1"
+rayon = "1.11.0"
 regex = "1.12.2"
 reqwest = { version = "0.12.24", default-features = false, features = ["rustls-tls"] }
 rstest = "0.26.1"
@@ -35,6 +36,7 @@ syntect = { version = "5.3.0", default-features = false, features = ["default-fa
 tempfile = "3.23.0"
 tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread"] }
 uuid = { version = "1.18.1", features = ["v4"] }
+which = "8.0.0"
 zeroize = { version = "1.8.2", features = ["aarch64", "derive", "std", "serde"] }
 
 [workspace.lints.rust]
@@ -68,10 +70,10 @@ pre-release-replacements = [
 ]
 
 [dependencies]
-blue-build-recipe = { version = "=0.9.24", path = "./recipe" }
-blue-build-template = { version = "=0.9.24", path = "./template" }
-blue-build-utils = { version = "=0.9.24", path = "./utils" }
-blue-build-process-management = { version = "=0.9.24", path = "./process" }
+blue-build-recipe = { version = "=0.9.27", path = "./recipe" }
+blue-build-template = { version = "=0.9.27", path = "./template" }
+blue-build-utils = { version = "=0.9.27", path = "./utils" }
+blue-build-process-management = { version = "=0.9.27", path = "./process" }
 clap-verbosity-flag = "3.0.4"
 clap_complete = "4.5.59"
 clap_complete_nushell = "4.5.9"
@@ -79,7 +81,6 @@ fuzzy-matcher = "0.3.7"
 jsonschema = "0.30.0"
 open = "5.3.2"
 os_info = "3.12.0"
-rayon = "1.11.0"
 requestty = { version = "0.6.1", features = ["macros", "termion"] }
 rust-embed = { version = "8.7.2", features = ["debug-embed", "compression", "deterministic-timestamps"] }
 shadow-rs = { version = "1.4.0", default-features = false }
@@ -96,6 +97,7 @@ indicatif.workspace = true
 log.workspace = true
 miette = { workspace = true, features = ["fancy"] }
 oci-distribution.workspace = true
+rayon.workspace = true
 regex.workspace = true
 reqwest.workspace = true
 semver.workspace = true

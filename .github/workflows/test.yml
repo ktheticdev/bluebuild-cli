@@ -104,7 +104,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -142,7 +142,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -169,6 +169,83 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
         run: just test-empty-files-build
 
+  bluefin-build:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        with:
+          install: true
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      # Setup repo and add caching
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-bluefin-build
+
+  build-chunked-oci-build:
+    timeout-minutes: 40
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        with:
+          install-dir: /usr/bin
+          use-sudo: true
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: |
+          export CARGO_HOME=$HOME/.cargo
+          just test-build-chunked-oci-build
+
   rechunk-build:
     timeout-minutes: 40
     runs-on: ubuntu-24.04
@@ -181,7 +258,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
         with:
           install-dir: /usr/bin
           use-sudo: true
@@ -222,9 +299,9 @@ jobs:
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
       # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      #   uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -262,7 +339,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -311,7 +388,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
 
@@ -346,7 +423,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
 
@@ -369,6 +446,191 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
         run: just test-buildah-build
 
+  multi-platform-docker:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        with:
+          install: true
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-multiplatform-docker
+
+  multi-platform-podman:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-multiplatform-podman
+
+  multi-platform-buildah:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-multiplatform-buildah
+
+  multi-platform-build-chunked-oci:
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-multiplatform-build-chunked-oci
+
+  multi-platform-rechunk:
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v1
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-multiplatform-rechunk
+
   iso-from-image:
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -381,7 +643,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -407,6 +669,44 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
         run: just test-generate-iso-image
 
+  iso-from-image-web-ui:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        with:
+          install: true
+
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-generate-iso-web-ui
+
   iso-from-recipe:
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -419,7 +719,7 @@ jobs:
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
 
-      - uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -481,6 +781,43 @@ jobs:
           GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
           COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
         run: just test-container-podman-build
+
+  container-podman-build-chunked-oci:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read repo contents
+      packages: write # write test package to ghcr
+      id-token: write # docker auth
+
+    steps:
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+
+      - uses: earthly/actions-setup@43211c7a0eae5344d6d79fb4aaf209c8f8866203 # v1.0.13
+        with:
+          use-cache: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        with:
+          install: true
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repo }}
+
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Run Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PR_EVENT_NUMBER: ${{ inputs.pr_event_number }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.TEST_SIGNING_SECRET }}
+        run: just test-container-podman-build-chunked-oci
 
   container-podman-rechunk:
     timeout-minutes: 60

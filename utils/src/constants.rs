@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use constcat::concat;
 
 // Paths
@@ -22,6 +24,8 @@ pub const IMAGE_VERSION_LABEL: &str = "org.opencontainers.image.version";
 pub const BB_CACHE_LAYERS: &str = "BB_CACHE_LAYERS";
 pub const BB_BOOT_DRIVER: &str = "BB_BOOT_DRIVER";
 pub const BB_BUILD_ARCHIVE: &str = "BB_BUILD_ARCHIVE";
+pub const BB_BUILD_CHUNKED_OCI: &str = "BB_BUILD_CHUNKED_OCI";
+pub const BB_BUILD_CHUNKED_OCI_MAX_LAYERS: &str = "BB_BUILD_CHUNKED_OCI_MAX_LAYERS";
 pub const BB_BUILD_DRIVER: &str = "BB_BUILD_DRIVER";
 pub const BB_BUILD_NO_SIGN: &str = "BB_BUILD_NO_SIGN";
 pub const BB_BUILD_PUSH: &str = "BB_BUILD_PUSH";
@@ -35,6 +39,7 @@ pub const BB_GENISO_ENROLLMENT_PASSWORD: &str = "BB_GENISO_ENROLLMENT_PASSWORD";
 pub const BB_GENISO_ISO_NAME: &str = "BB_GENISO_ISO_NAME";
 pub const BB_GENISO_SECURE_BOOT_URL: &str = "BB_GENISO_SECURE_BOOT_URL";
 pub const BB_GENISO_VARIANT: &str = "BB_GENISO_VARIANT";
+pub const BB_GENISO_WEB_UI: &str = "BB_GENISO_WEB_UI";
 pub const BB_INSPECT_DRIVER: &str = "BB_INSPECT_DRIVER";
 pub const BB_PASSWORD: &str = "BB_PASSWORD";
 pub const BB_PRIVATE_KEY: &str = "BB_PRIVATE_KEY";
@@ -100,7 +105,10 @@ pub const BUILD_SCRIPTS_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli/buil
 pub const BLUE_BUILD_IMAGE_REF: &str = "ghcr.io/ktheticdev/bluebuild-cli";
 pub const BLUE_BUILD_MODULE_IMAGE_REF: &str = "ghcr.io/blue-build/modules";
 pub const BLUE_BUILD_SCRIPTS_DIR_IGNORE: &str = "/.bluebuild-scripts_*";
-pub const COSIGN_IMAGE: &str = "ghcr.io/sigstore/cosign/cosign:v2.6.1";
+pub const COSIGN_IMAGE: &str = concat!(COSIGN_IMAGE_REF, ":v", COSIGN_IMAGE_VERSION);
+pub const COSIGN_IMAGE_REF: &str = "ghcr.io/sigstore/cosign/cosign";
+pub const COSIGN_IMAGE_VERSION: &str = "3.0.2";
+pub const JASONN3_INSTALLER_IMAGE: &str = "ghcr.io/jasonn3/build-container-installer:v1.4.0";
 pub const NUSHELL_IMAGE: &str = "ghcr.io/blue-build/nushell-image";
 pub const OCI_ARCHIVE: &str = "oci-archive";
 pub const OSTREE_IMAGE_SIGNED: &str = "ostree-image-signed";
@@ -112,6 +120,7 @@ pub const UNKNOWN_SHELL: &str = "<unknown shell>";
 pub const UNKNOWN_VERSION: &str = "<unknown version>";
 pub const UNKNOWN_TERMINAL: &str = "<unknown terminal>";
 pub const GITHUB_CHAR_LIMIT: usize = 8100; // Magic number accepted by Github
+pub const DEFAULT_MAX_LAYERS: NonZeroU32 = NonZeroU32::new(128).unwrap();
 
 // Schema
 pub const SCHEMA_BASE_URL: &str = "https://raw.githubusercontent.com/ktheticdev/bluebuild-cli/refs/heads/main/test-files/schema";

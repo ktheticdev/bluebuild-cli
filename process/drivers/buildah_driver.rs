@@ -1,12 +1,15 @@
 use blue_build_utils::{credentials::Credentials, secret::SecretArgs, semver::Version};
 use colored::Colorize;
 use comlexr::{cmd, pipe};
-use log::{debug, error, info, trace};
+use log::{debug, error, info, trace, warn};
 use miette::{Context, IntoDiagnostic, Result, bail};
 use serde::Deserialize;
 use tempfile::TempDir;
 
-use crate::logging::CommandLogging;
+use crate::{
+    drivers::opts::{ManifestCreateOpts, ManifestPushOpts},
+    logging::CommandLogging,
+};
 
 use super::{
     BuildDriver, DriverVersion,
@@ -64,22 +67,28 @@ impl BuildDriver for BuildahDriver {
             ],
             "--pull=true",
             format!("--layers={}", !opts.squash),
-            if let Some(cache_from) = opts.cache_from.as_ref() => [
-                "--cache-from",
-                format!(
-                    "{}/{}",
-                    cache_from.registry(),
-                    cache_from.repository()
-                ),
-            ],
-            if let Some(cache_to) = opts.cache_to.as_ref() => [
-                "--cache-to",
-                format!(
-                    "{}/{}",
-                    cache_to.registry(),
-                    cache_to.repository()
-                ),
-            ],
+            match opts.cache_from.as_ref() {
+                Some(cache_from) if !opts.squash => [
+                    "--cache-from",
+                    format!(
+                        "{}/{}",
+                        cache_from.registry(),
+                        cache_from.repository()
+                    ),
+                ],
+                _ => [],
+            },
+            match opts.cache_from.as_ref() {
+                Some(cache_to) if !opts.squash => [
+                    "--cache-to",
+                    format!(
+                        "{}/{}",
+                        cache_to.registry(),
+                        cache_to.repository()
+                    ),
+                ],
+                _ => [],
+            },
             "-f",
             opts.containerfile,
             "-t",
@@ -193,6 +202,71 @@ impl BuildDriver for BuildahDriver {
 
         if !status.success() {
             bail!("Failed to prune buildah");
+        }
+
+        Ok(())
+    }
+
+    fn manifest_create(opts: ManifestCreateOpts) -> Result<()> {
+        let output = {
+            let c = cmd!("buildah", "manifest", "rm", opts.final_image.to_string());
+            trace!("{c:?}");
+            c
+        }
+        .output()
+        .into_diagnostic()?;
+
+        if output.status.success() {
+            warn!(
+                "Existing image manifest {} exists, removing...",
+                opts.final_image
+            );
+        }
+
+        let output = {
+            let c = cmd!(
+                "buildah",
+                "manifest",
+                "create",
+                opts.final_image.to_string(),
+                for image in opts.image_list => format!("containers-storage:{image}"),
+            );
+            trace!("{c:?}");
+            c
+        }
+        .output()
+        .into_diagnostic()?;
+
+        if !output.status.success() {
+            bail!(
+                "Failed to create manifest for {}:\n{}",
+                opts.final_image,
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        Ok(())
+    }
+
+    fn manifest_push(opts: ManifestPushOpts) -> Result<()> {
+        let image = &opts.final_image.to_string();
+        let status = {
+            let c = cmd!(
+                "buildah",
+                "manifest",
+                "push",
+                "--all",
+                image,
+                format!("docker://{}", opts.final_image),
+            );
+            trace!("{c:?}");
+            c
+        }
+        .build_status(image, format!("Pushing manifest {image}..."))
+        .into_diagnostic()?;
+
+        if !status.success() {
+            bail!("Failed to create manifest for {}", opts.final_image);
         }
 
         Ok(())
