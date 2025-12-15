@@ -29,6 +29,13 @@
             "$ref": "#/$defs/RecordString",
             "description": "Environment variables to add for the module call."
         },
+        "secrets": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Secret"
+            },
+            "description": "Secrets to mount for this module call."
+        },
         "repos": {
             "$ref": "#/$defs/Repo",
             "description": "List of links to .repo files to download into /etc/yum.repos.d/."
@@ -38,7 +45,7 @@
             "items": {
                 "type": "string"
             },
-            "description": "List of folder names under /opt/ to enable for installing into."
+            "description": "DEPRECATED: List of folder names under /opt/ to enable for installing into."
         },
         "group-remove": {
             "$ref": "#/$defs/GroupRemove",
@@ -76,6 +83,22 @@
                 "type": "string"
             }
         },
+        "Secret": {
+            "oneOf": [
+                {
+                    "$ref": "#/$defs/SecretEnv"
+                },
+                {
+                    "$ref": "#/$defs/SecretFile"
+                },
+                {
+                    "$ref": "#/$defs/SecretExec"
+                },
+                {
+                    "$ref": "#/$defs/SecretSsh"
+                }
+            ]
+        },
         "Repo": {
             "type": "object",
             "properties": {
@@ -103,7 +126,14 @@
                         {
                             "type": "array",
                             "items": {
-                                "type": "string"
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/RepoCoprEnable"
+                                    }
+                                ]
                             }
                         },
                         {
@@ -185,6 +215,13 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "A list of packages to prevent from being installed"
                 }
             },
             "required": [
@@ -249,6 +286,13 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "A list of packages to prevent from being installed"
                 }
             },
             "required": [
@@ -296,6 +340,13 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "A list of packages to prevent from being installed"
                 }
             },
             "required": [
@@ -303,6 +354,95 @@
                 "packages"
             ],
             "additionalProperties": false
+        },
+        "SecretEnv": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "env",
+                    "description": "A secret pulled from an environment variable."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The name of the environment variable"
+                },
+                "mount": {
+                    "$ref": "#/$defs/SecretMount",
+                    "description": "Defines the mount type for the result of the command into the build."
+                }
+            },
+            "required": [
+                "type",
+                "name",
+                "mount"
+            ]
+        },
+        "SecretFile": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "file",
+                    "description": "A secret pulled from a file."
+                },
+                "source": {
+                    "type": "string",
+                    "description": "The source file containing the secret.\n\nNOTE: Relative paths are relative to the root of the repository."
+                },
+                "mount": {
+                    "$ref": "#/$defs/SecretMount",
+                    "description": "Defines the mount type for the result of the command into the build."
+                }
+            },
+            "required": [
+                "type",
+                "source",
+                "mount"
+            ]
+        },
+        "SecretExec": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "exec",
+                    "description": "A secret pulled from the stdout of a command."
+                },
+                "command": {
+                    "type": "string",
+                    "description": "The command that will be executed."
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Arguments for the command being executed."
+                },
+                "mount": {
+                    "$ref": "#/$defs/SecretMount",
+                    "description": "Defines the mount type for the result of the command into the build."
+                }
+            },
+            "required": [
+                "type",
+                "command",
+                "mount"
+            ]
+        },
+        "SecretSsh": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "ssh",
+                    "description": "Mount the SSH socket to use the hosts SSH socket."
+                }
+            },
+            "required": [
+                "type"
+            ]
         },
         "RepoFiles": {
             "type": "object",
@@ -324,13 +464,38 @@
             },
             "additionalProperties": false
         },
+        "RepoCoprEnable": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "The COPR repo's name"
+                },
+                "chroot": {
+                    "type": "string",
+                    "description": "The chroot for the COPR repo"
+                }
+            },
+            "required": [
+                "name",
+                "chroot"
+            ],
+            "additionalProperties": false
+        },
         "RepoCopr": {
             "type": "object",
             "properties": {
                 "enable": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/RepoCoprEnable"
+                            }
+                        ]
                     },
                     "description": "List of COPR repos to enable"
                 },
@@ -377,6 +542,13 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Whether to allow erasing (removal) of packages in case of dependency problems."
+                },
+                "exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "A list of packages to prevent from being installed"
                 }
             },
             "required": [
@@ -407,6 +579,52 @@
                 "new"
             ],
             "additionalProperties": false
+        },
+        "SecretMount": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/SecretMountEnv"
+                },
+                {
+                    "$ref": "#/$defs/SecretMountFile"
+                }
+            ]
+        },
+        "SecretMountEnv": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "env",
+                    "description": "A secret pulled from a file on the host system."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The environment variable where the secret will be set."
+                }
+            },
+            "required": [
+                "type",
+                "name"
+            ]
+        },
+        "SecretMountFile": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "file",
+                    "description": "A secret pulled from a file on the host system."
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "The destination path in the build to mount the secret."
+                }
+            },
+            "required": [
+                "type",
+                "destination"
+            ]
         }
     }
 }
